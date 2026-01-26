@@ -5,7 +5,8 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const cron = require('node-cron');
-const fs = require('fs');
+const connectDB = require('./lib/db');
+const Video = require('./models/Video');
 const {
   morningAthkar,
   eveningAthkar,
@@ -15,8 +16,6 @@ const {
   duas,
   videos
 } = require('./data/content');
-
-const VIDEOS_DB = './data/videos.json';
 
 // ==========================================
 // 📌 الإعدادات
@@ -28,7 +27,6 @@ const TIMEZONE = process.env.TIMEZONE || 'Asia/Amman';
 
 if (!BOT_TOKEN) {
   console.error('❌ خطأ: لم يتم تعيين BOT_TOKEN في ملف .env');
-  // Don't exit in production/vercel to avoid crash loops, just log
   if (require.main === module) process.exit(1);
 }
 
@@ -36,25 +34,35 @@ if (!BOT_TOKEN) {
 const isLocal = require.main === module;
 
 // إنشاء البوت
-// Only use polling if running locally
 const bot = new TelegramBot(BOT_TOKEN, { polling: isLocal });
 
 console.log(`✅ Bot Initialized. Mode: ${isLocal ? 'Polling (Local)' : 'Webhook (Serverless)'}`);
 console.log('📿 CNE Athkar Bot');
 
 // ==========================================
+// 🛠️ Serverless Promise Tracking
+// ==========================================
+const pendingPromises = [];
+function track(promise) {
+  pendingPromises.push(promise);
+  promise.finally(() => {
+    const index = pendingPromises.indexOf(promise);
+    if (index > -1) pendingPromises.splice(index, 1);
+  });
+  return promise;
+}
+
+// Intercept common methods to track them
+['sendMessage', 'copyMessage', 'forwardMessage'].forEach(method => {
+  if (bot[method]) {
+    const original = bot[method].bind(bot);
+    bot[method] = (...args) => track(original(...args));
+  }
+});
+
+// ==========================================
 // 🛠️ دوال مساعدة
 // ==========================================
-
-// تحميل قائمة الفيديوهات من ملف JSON
-function loadVideosList() {
-  try {
-    if (fs.existsSync(VIDEOS_DB)) {
-      return JSON.parse(fs.readFileSync(VIDEOS_DB, 'utf8'));
-    }
-  } catch (e) { }
-  return [];
-}
 
 // تنسيق أذكار الصباح
 function formatMorningAthkar() {
@@ -84,7 +92,6 @@ function formatMorningAthkar() {
   return message;
 }
 
-// تنسيق المحتوى المسائي
 function getRandomItem(array) {
   return array[Math.floor(Math.random() * array.length)];
 }
@@ -171,21 +178,28 @@ const sendEveningMessage = async (targetChatId = GROUP_CHAT_ID) => {
     return;
   }
   try {
-    // 1. Send Video (from saved list or static list)
-    let videosList = loadVideosList();
-    if (videosList.length > 0) {
-      const video = videosList[Math.floor(Math.random() * videosList.length)];
+    // 1. Send Video (from MongoDB or static list)
+    await connectDB();
+    const count = await Video.countDocuments();
+    let video = null;
+
+    if (count > 0) {
+      const random = Math.floor(Math.random() * count);
+      video = await Video.findOne().skip(random);
+    }
+
+    if (video) {
       try {
         // Using copyMessage to hide forward header
         await bot.copyMessage(targetChatId, video.chat_id, video.message_id);
-        console.log('✅ تم إرسال فيديو محفوظ');
+        console.log('✅ تم إرسال فيديو محفوظ من قاعدة البيانات');
       } catch (e) {
         console.error('❌ خطأ في إرسال الفيديو المحفوظ:', e.message);
       }
     } else if (videos.length > 0) {
       // Fallback to static videos from content.js
-      const video = getRandomItem(videos);
-      const videoMessage = `🎬 *فيديو اليوم*\n\n${video.title}\n\n${video.url}`;
+      const staticVideo = getRandomItem(videos);
+      const videoMessage = `🎬 *فيديو اليوم*\n\n${staticVideo.title}\n\n${staticVideo.url}`;
       await bot.sendMessage(targetChatId, videoMessage, { parse_mode: 'Markdown' });
     }
 
@@ -204,29 +218,8 @@ const sendEveningMessage = async (targetChatId = GROUP_CHAT_ID) => {
 // ==========================================
 
 if (isLocal) {
-  // نشر الصباح
   cron.schedule('0 5 * * *', () => sendMorningMessage(), { timezone: TIMEZONE });
-
-  // نشر المساء
   cron.schedule('0 23 * * *', () => sendEveningMessage(), { timezone: TIMEZONE });
-
-  // ميزة إعادة توجيه الفيديو من القناة (تعمل فقط محلياً حالياً لأنها تتطلب Polling ومراقبة)
-  // أو يمكن تحويلها لـ Cron Job يفحص القناة بشكل دوري
-  const SOURCE_CHANNEL = '@islamic_clips';
-  cron.schedule('0 23 * * *', async () => {
-    if (!GROUP_CHAT_ID) return;
-    try {
-      const updates = await bot.getChatHistory(SOURCE_CHANNEL, { limit: 10 });
-      const lastVideoMsg = updates.find(msg => msg.video);
-      if (lastVideoMsg) {
-        await bot.copyMessage(GROUP_CHAT_ID, SOURCE_CHANNEL, lastVideoMsg.message_id);
-        console.log('✅ تم نسخ فيديو من القناة');
-      }
-    } catch (error) {
-      console.error('❌ خطأ في جلب فيديو من القناة:', error.message);
-    }
-  }, { timezone: TIMEZONE });
-
   console.log('⏰ Local Cron Jobs Scheduled');
 }
 
@@ -253,7 +246,6 @@ bot.onText(/\/start/, (msg) => {
 });
 
 bot.onText(/\/help/, (msg) => {
-  // ... same help message ...
   const helpMessage = `📚 *دليل استخدام البوت*\n\n/thikr - ذكر\n/morning - أذكار الصباح\n/evening - أذكار المساء\n...`;
   bot.sendMessage(msg.chat.id, helpMessage, { parse_mode: 'Markdown' });
 });
@@ -289,7 +281,6 @@ bot.onText(/\/morning/, (msg) => {
 });
 
 bot.onText(/\/evening/, (msg) => {
-  // Simple evening athkar list
   let message = `🌙 أذكار المساء\n━━━━━━━━━━━━━━━━\n\n`;
   const selectedAthkar = eveningAthkar.slice(0, 3);
   selectedAthkar.forEach((thikr, index) => {
@@ -310,7 +301,6 @@ bot.onText(/\/test_morning/, (msg) => {
 
 bot.onText(/\/test_evening/, async (msg) => {
   console.log('🧪 Testing Evening...');
-  // Reusing the main function logic but targetting the requester
   sendEveningMessage(msg.chat.id);
 });
 
@@ -319,34 +309,44 @@ bot.onText(/\/status/, (msg) => {
   let status = `🤖 حالة البوت\n━━━━━━━━━━━━━━━━\n`;
   status += `✅ البوت يعمل (${isLocal ? 'Local' : 'Serverless'})\n`;
   status += `⏰ الوقت: ${now.toLocaleTimeString('ar-EG')}\n`;
+  status += `🗄️ التخزين: MongoDB\n`;
   bot.sendMessage(msg.chat.id, status);
 });
 
-// حفظ الفيديوهات من الخاص
-bot.on('message', (msg) => {
+// حفظ الفيديوهات من الخاص (MongoDB)
+bot.on('message', async (msg) => {
   if (msg.chat.type === 'private' && msg.video) {
-    let videosList = loadVideosList();
-    let entry;
-    if (msg.forward_from_chat && msg.forward_from_message_id) {
-      entry = { chat_id: msg.forward_from_chat.id, message_id: msg.forward_from_message_id };
-    } else {
-      entry = { chat_id: msg.chat.id, message_id: msg.message_id };
-    }
-    if (!videosList.find(v => v.chat_id === entry.chat_id && v.message_id === entry.message_id)) {
-      videosList.push(entry);
+    // Track this async operation as well
+    const op = (async () => {
       try {
-        fs.writeFileSync(VIDEOS_DB, JSON.stringify(videosList, null, 2), 'utf8');
-        bot.sendMessage(msg.chat.id, '✅ تم حفظ الفيديو.');
-      } catch (e) {
-        bot.sendMessage(msg.chat.id, '⚠️ لا يمكن حفظ الفيديو (خطأ تخزين).');
+        await connectDB();
+        let entry;
+        if (msg.forward_from_chat && msg.forward_from_message_id) {
+          entry = { chat_id: msg.forward_from_chat.id, message_id: msg.forward_from_message_id };
+        } else {
+          entry = { chat_id: msg.chat.id, message_id: msg.message_id };
+        }
+
+        const exists = await Video.findOne({ chat_id: entry.chat_id.toString(), message_id: entry.message_id.toString() });
+
+        if (!exists) {
+          await Video.create({
+            chat_id: entry.chat_id.toString(),
+            message_id: entry.message_id.toString()
+          });
+          await bot.sendMessage(msg.chat.id, '✅ تم حفظ الفيديو في قاعدة البيانات.');
+        } else {
+          await bot.sendMessage(msg.chat.id, '⚠️ هذا الفيديو محفوظ مسبقاً.');
+        }
+      } catch (error) {
+        console.error('Error saving video:', error);
+        await bot.sendMessage(msg.chat.id, '❌ حدث خطأ أثناء الحفظ.');
       }
-    } else {
-      bot.sendMessage(msg.chat.id, '⚠️ محفوظ مسبقاً.');
-    }
+    })();
+    track(op); // Track this promise
   }
 });
 
-// Polling Error
 if (isLocal) {
   bot.on('polling_error', (error) => console.error('❌ Polling Error:', error.message));
 }
@@ -355,5 +355,6 @@ if (isLocal) {
 module.exports = {
   bot,
   sendMorningMessage,
-  sendEveningMessage
+  sendEveningMessage,
+  pendingPromises
 };
