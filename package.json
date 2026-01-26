@@ -1,0 +1,18 @@
+{
+  "name": "cne-athkar-bot",
+  "version": "1.0.0",
+  "description": "بوت أذكار إسلامي لقروب الجامعة",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "node bot.js"
+  },
+  "dependencies": {
+    "node-telegram-bot-api": "^0.64.0",
+    "node-cron": "^3.0.3",
+    "dotenv": "^16.4.5"
+  },
+  "keywords": ["telegram", "bot", "athkar", "islamic"],
+  "author": "CNE",
+  "license": "MIT"
+}
