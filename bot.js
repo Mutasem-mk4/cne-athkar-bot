@@ -369,11 +369,27 @@ bot.onText(/\/test_morning/, (msg) => {
   console.log('✅ تم إرسال رسالة الصباح التجريبية');
 });
 
-bot.onText(/\/test_evening/, (msg) => {
+bot.onText(/\/test_evening/, async (msg) => {
   const chatId = msg.chat.id;
   console.log('🧪 اختبار رسالة المساء...');
+  
+  // إرسال فيديو عشوائي من القائمة المحفوظة
+  let videosList = loadVideosList();
+  if (videosList.length > 0) {
+    const video = videosList[Math.floor(Math.random() * videosList.length)];
+    try {
+      await bot.forwardMessage(chatId, video.chat_id, video.message_id);
+      console.log('✅ تم إرسال الفيديو');
+    } catch (e) {
+      console.error('❌ خطأ في إرسال الفيديو:', e.message);
+    }
+  } else {
+    console.log('⚠️ لا يوجد فيديوهات محفوظة');
+  }
+  
+  // إرسال المحتوى النصي
   const message = formatEveningContent();
-  bot.sendMessage(chatId, message);
+  bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
   console.log('✅ تم إرسال رسالة المساء التجريبية');
 });
 
