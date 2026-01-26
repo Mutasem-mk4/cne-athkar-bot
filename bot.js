@@ -197,7 +197,7 @@ cron.schedule('0 23 * * *', async () => {
     // ابحث عن أول رسالة تحتوي على فيديو
     const lastVideoMsg = updates.find(msg => msg.video);
     if (lastVideoMsg) {
-      await bot.forwardMessage(GROUP_CHAT_ID, SOURCE_CHANNEL, lastVideoMsg.message_id);
+      await bot.copyMessage(GROUP_CHAT_ID, SOURCE_CHANNEL, lastVideoMsg.message_id);
       console.log('✅ تم إعادة توجيه فيديو من القناة');
     } else {
       console.log('❌ لم يتم العثور على فيديو في آخر 10 رسائل');
@@ -268,14 +268,14 @@ bot.onText(/\/thikr/, (msg) => {
   const chatId = msg.chat.id;
   const allAthkar = [...morningAthkar, ...eveningAthkar];
   const thikr = getRandomItem(allAthkar);
-  
+
   let message = `📿 *ذكر*\n\n`;
   message += `${thikr.text}\n\n`;
   message += `📖 _${thikr.count}_`;
   if (thikr.reward) {
     message += `\n\n✨ ${thikr.reward}`;
   }
-  
+
   bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
 });
 
@@ -283,12 +283,12 @@ bot.onText(/\/thikr/, (msg) => {
 bot.onText(/\/hadith/, (msg) => {
   const chatId = msg.chat.id;
   const hadith = getRandomItem(hadiths);
-  
+
   let message = `📜 *حديث نبوي*\n\n`;
   message += `${hadith.hadith}\n\n`;
   message += `📍 _${hadith.narrator}_\n\n`;
   message += `💡 *الشرح:*\n${hadith.explanation}`;
-  
+
   bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
 });
 
@@ -296,12 +296,12 @@ bot.onText(/\/hadith/, (msg) => {
 bot.onText(/\/verse/, (msg) => {
   const chatId = msg.chat.id;
   const verse = getRandomItem(verses);
-  
+
   let message = `📖 *آية قرآنية*\n\n`;
   message += `${verse.verse}\n\n`;
   message += `📍 _${verse.surah}_\n\n`;
   message += `💡 *التفسير:*\n${verse.tafsir}`;
-  
+
   bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
 });
 
@@ -309,9 +309,9 @@ bot.onText(/\/verse/, (msg) => {
 bot.onText(/\/dua/, (msg) => {
   const chatId = msg.chat.id;
   const dua = getRandomItem(duas);
-  
+
   const message = `🤲 *دعاء*\n\n${dua}`;
-  
+
   bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
 });
 
@@ -319,11 +319,11 @@ bot.onText(/\/dua/, (msg) => {
 bot.onText(/\/quote/, (msg) => {
   const chatId = msg.chat.id;
   const quote = getRandomItem(quotes);
-  
+
   let message = `💭 *مقولة*\n\n`;
   message += `${quote.quote}\n\n`;
   message += `— _${quote.author}_`;
-  
+
   bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
 });
 
@@ -337,7 +337,7 @@ bot.onText(/\/morning/, (msg) => {
 // أمر أذكار المساء
 bot.onText(/\/evening/, (msg) => {
   const chatId = msg.chat.id;
-  
+
   let message = `🌙 أذكار المساء\n`;
   message += `━━━━━━━━━━━━━━━━\n\n`;
 
@@ -372,13 +372,13 @@ bot.onText(/\/test_morning/, (msg) => {
 bot.onText(/\/test_evening/, async (msg) => {
   const chatId = msg.chat.id;
   console.log('🧪 اختبار رسالة المساء...');
-  
+
   // إرسال فيديو عشوائي من القائمة المحفوظة
   let videosList = loadVideosList();
   if (videosList.length > 0) {
     const video = videosList[Math.floor(Math.random() * videosList.length)];
     try {
-      await bot.forwardMessage(chatId, video.chat_id, video.message_id);
+      await bot.copyMessage(chatId, video.chat_id, video.message_id);
       console.log('✅ تم إرسال الفيديو');
     } catch (e) {
       console.error('❌ خطأ في إرسال الفيديو:', e.message);
@@ -386,7 +386,7 @@ bot.onText(/\/test_evening/, async (msg) => {
   } else {
     console.log('⚠️ لا يوجد فيديوهات محفوظة');
   }
-  
+
   // إرسال المحتوى النصي
   const message = formatEveningContent();
   bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
@@ -398,7 +398,7 @@ bot.onText(/\/status/, (msg) => {
   const chatId = msg.chat.id;
   const now = new Date();
   const timezone = process.env.TIMEZONE || 'Asia/Amman';
-  
+
   let status = `🤖 حالة البوت\n`;
   status += `━━━━━━━━━━━━━━━━\n\n`;
   status += `✅ البوت يعمل\n\n`;
@@ -408,7 +408,7 @@ bot.onText(/\/status/, (msg) => {
   status += `   🌅 الصباح: 5:00 ص\n`;
   status += `   🌙 المساء: 11:00 م\n\n`;
   status += `📍 Group ID: ${process.env.GROUP_CHAT_ID || 'غير محدد'}\n`;
-  
+
   bot.sendMessage(chatId, status);
 });
 
@@ -433,7 +433,7 @@ function loadVideosList() {
     if (fs.existsSync(VIDEOS_DB)) {
       return JSON.parse(fs.readFileSync(VIDEOS_DB, 'utf8'));
     }
-  } catch (e) {}
+  } catch (e) { }
   return [];
 }
 
@@ -450,7 +450,7 @@ bot.on('message', (msg) => {
       if (fs.existsSync(VIDEOS_DB)) {
         videosList = JSON.parse(fs.readFileSync(VIDEOS_DB, 'utf8'));
       }
-    } catch (e) {}
+    } catch (e) { }
     let entry;
     if (msg.forward_from_chat && msg.forward_from_message_id) {
       // فيديو فورورد
@@ -481,7 +481,7 @@ cron.schedule('0 23 * * *', async () => {
   // اختر فيديو عشوائي
   const video = videosList[Math.floor(Math.random() * videosList.length)];
   try {
-    await bot.forwardMessage(GROUP_CHAT_ID, video.chat_id, video.message_id);
+    await bot.copyMessage(GROUP_CHAT_ID, video.chat_id, video.message_id);
     console.log('✅ تم إرسال فيديو محفوظ للقروب');
   } catch (e) {
     console.error('❌ خطأ في إرسال الفيديو:', e.message);
