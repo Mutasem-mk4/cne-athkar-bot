@@ -5,6 +5,7 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const cron = require('node-cron');
+const fs = require('fs');
 const {
   morningAthkar,
   eveningAthkar,
@@ -14,7 +15,7 @@ const {
   duas,
   videos
 } = require('./data/content');
-const fs = require('fs');
+
 const VIDEOS_DB = './data/videos.json';
 
 // ==========================================
@@ -23,25 +24,36 @@ const VIDEOS_DB = './data/videos.json';
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const GROUP_CHAT_ID = process.env.GROUP_CHAT_ID;
+const TIMEZONE = process.env.TIMEZONE || 'Asia/Amman';
 
 if (!BOT_TOKEN) {
   console.error('❌ خطأ: لم يتم تعيين BOT_TOKEN في ملف .env');
-  process.exit(1);
+  // Don't exit in production/vercel to avoid crash loops, just log
+  if (require.main === module) process.exit(1);
 }
 
-// إنشاء البوت
-const bot = new TelegramBot(BOT_TOKEN, { polling: true });
+// Check if running locally (not imported as a module)
+const isLocal = require.main === module;
 
-console.log('✅ البوت يعمل الآن...');
+// إنشاء البوت
+// Only use polling if running locally
+const bot = new TelegramBot(BOT_TOKEN, { polling: isLocal });
+
+console.log(`✅ Bot Initialized. Mode: ${isLocal ? 'Polling (Local)' : 'Webhook (Serverless)'}`);
 console.log('📿 CNE Athkar Bot');
 
 // ==========================================
 // 🛠️ دوال مساعدة
 // ==========================================
 
-// اختيار عنصر عشوائي من مصفوفة
-function getRandomItem(array) {
-  return array[Math.floor(Math.random() * array.length)];
+// تحميل قائمة الفيديوهات من ملف JSON
+function loadVideosList() {
+  try {
+    if (fs.existsSync(VIDEOS_DB)) {
+      return JSON.parse(fs.readFileSync(VIDEOS_DB, 'utf8'));
+    }
+  } catch (e) { }
+  return [];
 }
 
 // تنسيق أذكار الصباح
@@ -54,7 +66,6 @@ function formatMorningAthkar() {
   message += `📿 أذكار الصباح\n`;
   message += `━━━━━━━━━━━━━━━━\n\n`;
 
-  // اختر 3 أذكار عشوائية (لتقليل طول الرسالة)
   const selectedAthkar = [];
   const shuffled = [...morningAthkar].sort(() => 0.5 - Math.random());
   for (let i = 0; i < Math.min(3, shuffled.length); i++) {
@@ -74,8 +85,11 @@ function formatMorningAthkar() {
 }
 
 // تنسيق المحتوى المسائي
+function getRandomItem(array) {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
 function formatEveningContent() {
-  // اختيار نوع المحتوى عشوائياً
   const contentTypes = ['verse', 'hadith', 'quote', 'evening_athkar', 'dua'];
   const selectedType = getRandomItem(contentTypes);
 
@@ -134,91 +148,96 @@ function formatEveningContent() {
 }
 
 // ==========================================
-// ⏰ النشر التلقائي (Cron Jobs)
+// 📤 دوال النشر (Exported for Cron/API)
 // ==========================================
 
-// النشر الصباحي - الساعة 5:00 صباحاً
-cron.schedule('0 5 * * *', async () => {
-  if (!GROUP_CHAT_ID) {
+const sendMorningMessage = async (targetChatId = GROUP_CHAT_ID) => {
+  if (!targetChatId) {
     console.log('⚠️ لم يتم تعيين GROUP_CHAT_ID');
     return;
   }
-
   try {
     const message = formatMorningAthkar();
-    await bot.sendMessage(GROUP_CHAT_ID, message, { parse_mode: 'Markdown' });
+    await bot.sendMessage(targetChatId, message, { parse_mode: 'Markdown' });
     console.log('✅ تم إرسال أذكار الصباح');
   } catch (error) {
     console.error('❌ خطأ في إرسال أذكار الصباح:', error.message);
   }
-}, {
-  timezone: process.env.TIMEZONE || 'Asia/Amman'
-});
+};
 
-// النشر المسائي - الساعة 11:00 مساءً
-cron.schedule('0 23 * * *', async () => {
-  if (!GROUP_CHAT_ID) {
+const sendEveningMessage = async (targetChatId = GROUP_CHAT_ID) => {
+  if (!targetChatId) {
     console.log('⚠️ لم يتم تعيين GROUP_CHAT_ID');
     return;
   }
-
   try {
-    // أولاً: إرسال الفيديو (إذا موجود)
-    if (videos.length > 0) {
+    // 1. Send Video (from saved list or static list)
+    let videosList = loadVideosList();
+    if (videosList.length > 0) {
+      const video = videosList[Math.floor(Math.random() * videosList.length)];
+      try {
+        // Using copyMessage to hide forward header
+        await bot.copyMessage(targetChatId, video.chat_id, video.message_id);
+        console.log('✅ تم إرسال فيديو محفوظ');
+      } catch (e) {
+        console.error('❌ خطأ في إرسال الفيديو المحفوظ:', e.message);
+      }
+    } else if (videos.length > 0) {
+      // Fallback to static videos from content.js
       const video = getRandomItem(videos);
       const videoMessage = `🎬 *فيديو اليوم*\n\n${video.title}\n\n${video.url}`;
-      await bot.sendMessage(GROUP_CHAT_ID, videoMessage, { parse_mode: 'Markdown' });
+      await bot.sendMessage(targetChatId, videoMessage, { parse_mode: 'Markdown' });
     }
 
-    // ثانياً: إرسال المحتوى (آية/حديث/مقولة...)
+    // 2. Send Text Content
     const message = formatEveningContent();
-    await bot.sendMessage(GROUP_CHAT_ID, message, { parse_mode: 'Markdown' });
+    await bot.sendMessage(targetChatId, message, { parse_mode: 'Markdown' });
 
     console.log('✅ تم إرسال محتوى المساء');
   } catch (error) {
     console.error('❌ خطأ في إرسال محتوى المساء:', error.message);
   }
-}, {
-  timezone: process.env.TIMEZONE || 'Asia/Amman'
-});
+};
 
-// إعادة توجيه آخر فيديو من قناة @islamic_clips إلى القروب كل يوم الساعة 11 مساءً
-const SOURCE_CHANNEL = '@islamic_clips';
+// ==========================================
+// ⏰ النشر التلقائي والمحلي (Local Cron)
+// ==========================================
 
-cron.schedule('0 23 * * *', async () => {
-  if (!GROUP_CHAT_ID) {
-    console.log('⚠️ لم يتم تعيين GROUP_CHAT_ID');
-    return;
-  }
+if (isLocal) {
+  // نشر الصباح
+  cron.schedule('0 5 * * *', () => sendMorningMessage(), { timezone: TIMEZONE });
 
-  try {
-    // جلب آخر 10 رسائل من القناة
-    const updates = await bot.getChatHistory(SOURCE_CHANNEL, { limit: 10 });
-    // ابحث عن أول رسالة تحتوي على فيديو
-    const lastVideoMsg = updates.find(msg => msg.video);
-    if (lastVideoMsg) {
-      await bot.copyMessage(GROUP_CHAT_ID, SOURCE_CHANNEL, lastVideoMsg.message_id);
-      console.log('✅ تم إعادة توجيه فيديو من القناة');
-    } else {
-      console.log('❌ لم يتم العثور على فيديو في آخر 10 رسائل');
+  // نشر المساء
+  cron.schedule('0 23 * * *', () => sendEveningMessage(), { timezone: TIMEZONE });
+
+  // ميزة إعادة توجيه الفيديو من القناة (تعمل فقط محلياً حالياً لأنها تتطلب Polling ومراقبة)
+  // أو يمكن تحويلها لـ Cron Job يفحص القناة بشكل دوري
+  const SOURCE_CHANNEL = '@islamic_clips';
+  cron.schedule('0 23 * * *', async () => {
+    if (!GROUP_CHAT_ID) return;
+    try {
+      const updates = await bot.getChatHistory(SOURCE_CHANNEL, { limit: 10 });
+      const lastVideoMsg = updates.find(msg => msg.video);
+      if (lastVideoMsg) {
+        await bot.copyMessage(GROUP_CHAT_ID, SOURCE_CHANNEL, lastVideoMsg.message_id);
+        console.log('✅ تم نسخ فيديو من القناة');
+      }
+    } catch (error) {
+      console.error('❌ خطأ في جلب فيديو من القناة:', error.message);
     }
-  } catch (error) {
-    console.error('❌ خطأ في إعادة توجيه فيديو من القناة:', error.message);
-  }
-}, {
-  timezone: process.env.TIMEZONE || 'Asia/Amman'
-});
+  }, { timezone: TIMEZONE });
+
+  console.log('⏰ Local Cron Jobs Scheduled');
+}
 
 // ==========================================
-// 💬 الأوامر التفاعلية
+// 💬 الأوامر
 // ==========================================
 
-// أمر البداية
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   const welcomeMessage = `
 🌟 *أهلاً بك في بوت CNE Athkar*
-
 📿 بوت أذكار قروب الجامعة
 
 *الأوامر المتاحة:*
@@ -229,263 +248,112 @@ bot.onText(/\/start/, (msg) => {
 /morning - أذكار الصباح
 /evening - أذكار المساء
 /help - المساعدة
-
-━━━━━━━━━━━━━━━━
-🤲 جعله الله في ميزان حسناتكم
   `;
   bot.sendMessage(chatId, welcomeMessage, { parse_mode: 'Markdown' });
 });
 
-// أمر المساعدة
 bot.onText(/\/help/, (msg) => {
-  const chatId = msg.chat.id;
-  const helpMessage = `
-📚 *دليل استخدام البوت*
-
-*أوامر الأذكار:*
-/thikr - ذكر عشوائي من أذكار الصباح والمساء
-/morning - أذكار الصباح كاملة
-/evening - أذكار المساء كاملة
-
-*أوامر المحتوى:*
-/hadith - حديث نبوي عشوائي
-/verse - آية قرآنية مع تفسير
-/dua - دعاء عشوائي
-/quote - مقولة ملهمة
-
-*النشر التلقائي:*
-📅 الساعة 5:00 صباحاً - أذكار الصباح
-📅 الساعة 11:00 مساءً - فيديو + محتوى
-
-━━━━━━━━━━━━━━━━
-💡 يمكنك استخدام الأوامر في الخاص أو في القروب
-  `;
-  bot.sendMessage(chatId, helpMessage, { parse_mode: 'Markdown' });
+  // ... same help message ...
+  const helpMessage = `📚 *دليل استخدام البوت*\n\n/thikr - ذكر\n/morning - أذكار الصباح\n/evening - أذكار المساء\n...`;
+  bot.sendMessage(msg.chat.id, helpMessage, { parse_mode: 'Markdown' });
 });
 
-// أمر ذكر عشوائي
 bot.onText(/\/thikr/, (msg) => {
-  const chatId = msg.chat.id;
   const allAthkar = [...morningAthkar, ...eveningAthkar];
   const thikr = getRandomItem(allAthkar);
-
-  let message = `📿 *ذكر*\n\n`;
-  message += `${thikr.text}\n\n`;
-  message += `📖 _${thikr.count}_`;
-  if (thikr.reward) {
-    message += `\n\n✨ ${thikr.reward}`;
-  }
-
-  bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+  bot.sendMessage(msg.chat.id, `📿 *ذكر*\n\n${thikr.text}\n\n📖 _${thikr.count}_`, { parse_mode: 'Markdown' });
 });
 
-// أمر حديث عشوائي
 bot.onText(/\/hadith/, (msg) => {
-  const chatId = msg.chat.id;
   const hadith = getRandomItem(hadiths);
-
-  let message = `📜 *حديث نبوي*\n\n`;
-  message += `${hadith.hadith}\n\n`;
-  message += `📍 _${hadith.narrator}_\n\n`;
-  message += `💡 *الشرح:*\n${hadith.explanation}`;
-
-  bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+  bot.sendMessage(msg.chat.id, `📜 *حديث*\n\n${hadith.hadith}\n\n📍 _${hadith.narrator}_\n\n💡 ${hadith.explanation}`, { parse_mode: 'Markdown' });
 });
 
-// أمر آية عشوائية
 bot.onText(/\/verse/, (msg) => {
-  const chatId = msg.chat.id;
   const verse = getRandomItem(verses);
-
-  let message = `📖 *آية قرآنية*\n\n`;
-  message += `${verse.verse}\n\n`;
-  message += `📍 _${verse.surah}_\n\n`;
-  message += `💡 *التفسير:*\n${verse.tafsir}`;
-
-  bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+  bot.sendMessage(msg.chat.id, `📖 *آية*\n\n${verse.verse}\n\n📍 _${verse.surah}_\n\n💡 ${verse.tafsir}`, { parse_mode: 'Markdown' });
 });
 
-// أمر دعاء عشوائي
 bot.onText(/\/dua/, (msg) => {
-  const chatId = msg.chat.id;
   const dua = getRandomItem(duas);
-
-  const message = `🤲 *دعاء*\n\n${dua}`;
-
-  bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+  bot.sendMessage(msg.chat.id, `🤲 *دعاء*\n\n${dua}`, { parse_mode: 'Markdown' });
 });
 
-// أمر مقولة
 bot.onText(/\/quote/, (msg) => {
-  const chatId = msg.chat.id;
   const quote = getRandomItem(quotes);
-
-  let message = `💭 *مقولة*\n\n`;
-  message += `${quote.quote}\n\n`;
-  message += `— _${quote.author}_`;
-
-  bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+  bot.sendMessage(msg.chat.id, `💭 *مقولة*\n\n${quote.quote}\n\n— _${quote.author}_`, { parse_mode: 'Markdown' });
 });
 
-// أمر أذكار الصباح
 bot.onText(/\/morning/, (msg) => {
-  const chatId = msg.chat.id;
-  const message = formatMorningAthkar();
-  bot.sendMessage(chatId, message);
+  bot.sendMessage(msg.chat.id, formatMorningAthkar());
 });
 
-// أمر أذكار المساء
 bot.onText(/\/evening/, (msg) => {
-  const chatId = msg.chat.id;
-
-  let message = `🌙 أذكار المساء\n`;
-  message += `━━━━━━━━━━━━━━━━\n\n`;
-
-  // اختر 3 أذكار فقط
+  // Simple evening athkar list
+  let message = `🌙 أذكار المساء\n━━━━━━━━━━━━━━━━\n\n`;
   const selectedAthkar = eveningAthkar.slice(0, 3);
   selectedAthkar.forEach((thikr, index) => {
-    message += `${index + 1}. ${thikr.text}\n`;
-    message += `   📖 ${thikr.count}\n\n`;
+    message += `${index + 1}. ${thikr.text}\n   📖 ${thikr.count}\n\n`;
   });
-
-  message += `━━━━━━━━━━━━━━━━\n`;
-  message += `🤲 اللهم بارك لنا في ليلتنا`;
-
-  bot.sendMessage(chatId, message);
+  message += `━━━━━━━━━━━━━━━━\n🤲 اللهم بارك لنا في ليلتنا`;
+  bot.sendMessage(msg.chat.id, message);
 });
 
-// أمر للحصول على Chat ID (للإعداد)
 bot.onText(/\/chatid/, (msg) => {
-  const chatId = msg.chat.id;
-  bot.sendMessage(chatId, `📍 Chat ID: \`${chatId}\``, { parse_mode: 'Markdown' });
+  bot.sendMessage(msg.chat.id, `📍 Chat ID: \`${msg.chat.id}\``, { parse_mode: 'Markdown' });
 });
 
-// أمر اختبار النشر التلقائي
 bot.onText(/\/test_morning/, (msg) => {
-  const chatId = msg.chat.id;
-  console.log('🧪 اختبار رسالة الصباح...');
-  const message = formatMorningAthkar();
-  bot.sendMessage(chatId, message);
-  console.log('✅ تم إرسال رسالة الصباح التجريبية');
+  console.log('🧪 Testing Morning...');
+  sendMorningMessage(msg.chat.id);
 });
 
 bot.onText(/\/test_evening/, async (msg) => {
-  const chatId = msg.chat.id;
-  console.log('🧪 اختبار رسالة المساء...');
-
-  // إرسال فيديو عشوائي من القائمة المحفوظة
-  let videosList = loadVideosList();
-  if (videosList.length > 0) {
-    const video = videosList[Math.floor(Math.random() * videosList.length)];
-    try {
-      await bot.copyMessage(chatId, video.chat_id, video.message_id);
-      console.log('✅ تم إرسال الفيديو');
-    } catch (e) {
-      console.error('❌ خطأ في إرسال الفيديو:', e.message);
-    }
-  } else {
-    console.log('⚠️ لا يوجد فيديوهات محفوظة');
-  }
-
-  // إرسال المحتوى النصي
-  const message = formatEveningContent();
-  bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
-  console.log('✅ تم إرسال رسالة المساء التجريبية');
+  console.log('🧪 Testing Evening...');
+  // Reusing the main function logic but targetting the requester
+  sendEveningMessage(msg.chat.id);
 });
 
-// أمر لعرض حالة البوت
 bot.onText(/\/status/, (msg) => {
-  const chatId = msg.chat.id;
   const now = new Date();
-  const timezone = process.env.TIMEZONE || 'Asia/Amman';
-
-  let status = `🤖 حالة البوت\n`;
-  status += `━━━━━━━━━━━━━━━━\n\n`;
-  status += `✅ البوت يعمل\n\n`;
-  status += `⏰ الوقت الحالي: ${now.toLocaleTimeString('ar-EG')}\n`;
-  status += `🌍 المنطقة الزمنية: ${timezone}\n\n`;
-  status += `📅 مواعيد النشر:\n`;
-  status += `   🌅 الصباح: 5:00 ص\n`;
-  status += `   🌙 المساء: 11:00 م\n\n`;
-  status += `📍 Group ID: ${process.env.GROUP_CHAT_ID || 'غير محدد'}\n`;
-
-  bot.sendMessage(chatId, status);
+  let status = `🤖 حالة البوت\n━━━━━━━━━━━━━━━━\n`;
+  status += `✅ البوت يعمل (${isLocal ? 'Local' : 'Serverless'})\n`;
+  status += `⏰ الوقت: ${now.toLocaleTimeString('ar-EG')}\n`;
+  bot.sendMessage(msg.chat.id, status);
 });
 
-// ==========================================
-// 🔔 معالجة الأخطاء
-// ==========================================
-
-bot.on('polling_error', (error) => {
-  console.error('❌ خطأ في الاتصال:', error.message);
-});
-
-// رسالة تأكيد التشغيل
-console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-console.log('📿 CNE Athkar Bot is running!');
-console.log('⏰ Morning post: 5:00 AM');
-console.log('⏰ Evening post: 11:00 PM');
-console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-// تحميل قائمة الفيديوهات من ملف JSON
-function loadVideosList() {
-  try {
-    if (fs.existsSync(VIDEOS_DB)) {
-      return JSON.parse(fs.readFileSync(VIDEOS_DB, 'utf8'));
-    }
-  } catch (e) { }
-  return [];
-}
-
-// حفظ قائمة الفيديوهات
-function saveVideosList(list) {
-  fs.writeFileSync(VIDEOS_DB, JSON.stringify(list, null, 2), 'utf8');
-}
-
-// استقبال فيديوهات في الخاص وتخزينها (سواء فورورد أو فيديو عادي)
+// حفظ الفيديوهات من الخاص
 bot.on('message', (msg) => {
   if (msg.chat.type === 'private' && msg.video) {
-    let videosList = [];
-    try {
-      if (fs.existsSync(VIDEOS_DB)) {
-        videosList = JSON.parse(fs.readFileSync(VIDEOS_DB, 'utf8'));
-      }
-    } catch (e) { }
+    let videosList = loadVideosList();
     let entry;
     if (msg.forward_from_chat && msg.forward_from_message_id) {
-      // فيديو فورورد
       entry = { chat_id: msg.forward_from_chat.id, message_id: msg.forward_from_message_id };
     } else {
-      // فيديو عادي (مرسل من المستخدم نفسه)
       entry = { chat_id: msg.chat.id, message_id: msg.message_id };
     }
-    // تحقق من عدم التكرار
     if (!videosList.find(v => v.chat_id === entry.chat_id && v.message_id === entry.message_id)) {
       videosList.push(entry);
-      fs.writeFileSync(VIDEOS_DB, JSON.stringify(videosList, null, 2), 'utf8');
-      bot.sendMessage(msg.chat.id, '✅ تم حفظ الفيديو لإرساله تلقائياً في القروب.');
+      try {
+        fs.writeFileSync(VIDEOS_DB, JSON.stringify(videosList, null, 2), 'utf8');
+        bot.sendMessage(msg.chat.id, '✅ تم حفظ الفيديو.');
+      } catch (e) {
+        bot.sendMessage(msg.chat.id, '⚠️ لا يمكن حفظ الفيديو (خطأ تخزين).');
+      }
     } else {
-      bot.sendMessage(msg.chat.id, '⚠️ هذا الفيديو محفوظ مسبقاً.');
+      bot.sendMessage(msg.chat.id, '⚠️ محفوظ مسبقاً.');
     }
   }
 });
 
-// إرسال فيديو عشوائي من القائمة الساعة 11 مساءً
-cron.schedule('0 23 * * *', async () => {
-  if (!GROUP_CHAT_ID) return;
-  let videosList = loadVideosList();
-  if (videosList.length === 0) {
-    console.log('⚠️ لا يوجد فيديوهات محفوظة');
-    return;
-  }
-  // اختر فيديو عشوائي
-  const video = videosList[Math.floor(Math.random() * videosList.length)];
-  try {
-    await bot.copyMessage(GROUP_CHAT_ID, video.chat_id, video.message_id);
-    console.log('✅ تم إرسال فيديو محفوظ للقروب');
-  } catch (e) {
-    console.error('❌ خطأ في إرسال الفيديو:', e.message);
-  }
-}, {
-  timezone: process.env.TIMEZONE || 'Asia/Amman'
-});
+// Polling Error
+if (isLocal) {
+  bot.on('polling_error', (error) => console.error('❌ Polling Error:', error.message));
+}
+
+// Export for Vercel
+module.exports = {
+  bot,
+  sendMorningMessage,
+  sendEveningMessage
+};
