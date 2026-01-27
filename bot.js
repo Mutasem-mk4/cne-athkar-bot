@@ -21,7 +21,7 @@ const {
 // 📌 الإعدادات
 // ==========================================
 
-const BOT_TOKEN = process.env.BOT_TOKEN;
+const BOT_TOKEN = (process.env.BOT_TOKEN || '').trim();
 const GROUP_CHAT_ID = process.env.GROUP_CHAT_ID;
 const TIMEZONE = process.env.TIMEZONE || 'Asia/Amman';
 
