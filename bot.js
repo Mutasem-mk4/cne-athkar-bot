@@ -159,6 +159,7 @@ function formatEveningContent() {
 // ==========================================
 
 const sendMorningMessage = async (targetChatId = GROUP_CHAT_ID) => {
+  console.log('🌅 Starting sendMorningMessage to:', targetChatId);
   if (!targetChatId) {
     console.log('⚠️ لم يتم تعيين GROUP_CHAT_ID');
     return;
@@ -173,13 +174,16 @@ const sendMorningMessage = async (targetChatId = GROUP_CHAT_ID) => {
 };
 
 const sendEveningMessage = async (targetChatId = GROUP_CHAT_ID) => {
+  console.log('🌙 Starting sendEveningMessage to:', targetChatId);
   if (!targetChatId) {
     console.log('⚠️ لم يتم تعيين GROUP_CHAT_ID');
     return;
   }
   try {
     // 1. Send Video (from MongoDB or static list)
+    console.log('🔌 Connecting to DB...');
     await connectDB();
+    console.log('✅ DB Connected.');
     const count = await Video.countDocuments();
     let video = null;
 
