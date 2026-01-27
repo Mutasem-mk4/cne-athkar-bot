@@ -1,5 +1,5 @@
-const connectDB = require('../../lib/db');
-const Group = require('../../models/Group');
+const connectDB = require('../lib/db');
+const Group = require('../models/Group');
 
 module.exports = async (req, res) => {
     try {
