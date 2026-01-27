@@ -1,28 +1,33 @@
+const mongoose = require('mongoose');
 const connectDB = require('../lib/db');
-const { Video } = require('../bot');
+
+// Standalone Schema for testing
+const VideoSchema = new mongoose.Schema({
+    file_id: String,
+    chat_id: Number,
+    message_id: Number,
+    title: String,
+    date: { type: Date, default: Date.now }
+});
+
+const Video = mongoose.models.Video || mongoose.model('Video', VideoSchema);
 
 module.exports = async (req, res) => {
     try {
-        console.log('🔍 Manual DB Test started...');
-        const conn = await connectDB();
-        console.log('✅ DB Connection object obtained');
+        console.log('🔍 Standalone DB Test started...');
+        await connectDB();
+        console.log('✅ Connected.');
 
-        console.log('📊 Querying Video count...');
         const count = await Video.countDocuments();
-        console.log('✅ Video count:', count);
+        console.log('📊 Count:', count);
 
         res.status(200).json({
             status: 'success',
-            connected: true,
-            videoCount: count,
-            modelName: Video.modelName
+            count,
+            dbState: mongoose.connection.readyState
         });
     } catch (error) {
-        console.error('❌ DB Test Failure:', error);
-        res.status(500).json({
-            status: 'error',
-            message: error.message,
-            stack: error.stack
-        });
+        console.error('❌ Test Fail:', error);
+        res.status(500).json({ status: 'error', message: error.message });
     }
 };
