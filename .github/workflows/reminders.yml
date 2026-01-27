@@ -8,8 +8,8 @@ on:
     - cron: '30 5 * * *'
     # 14:30 UTC -> 5:30 PM Amman (Evening)
     - cron: '30 14 * * *'
-    # 15:27 UTC -> 6:27 PM Amman (Test Time)
-    - cron: '27 15 * * *'
+    # 16:50 UTC -> 7:50 PM Amman (Test Time)
+    - cron: '50 16 * * *'
   workflow_dispatch: # Allow manual trigger
 
 jobs:
@@ -27,7 +27,7 @@ jobs:
           elif [ "$HOUR" == "05" ]; then
             echo "🌅 Triggering Morning Athkar..."
             curl -s -X GET "https://cne-athkar-bot.vercel.app/api/cron/morning"
-          elif [ "$HOUR" == "14" ] || [ "$HOUR" == "15" ]; then
+          elif [ "$HOUR" == "14" ] || [ "$HOUR" == "15" ] || [ "$HOUR" == "16" ]; then
             echo "🌙 Triggering Evening Athkar..."
             curl -s -X GET "https://cne-athkar-bot.vercel.app/api/cron/evening"
           else
