@@ -8,10 +8,6 @@
         {
             "path": "/api/cron/evening",
             "schedule": "0 20 * * *"
-        },
-        {
-            "path": "/api/cron/test-video",
-            "schedule": "30 11 * * *"
         }
     ]
 }
