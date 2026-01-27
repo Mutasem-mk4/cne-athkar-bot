@@ -7,14 +7,10 @@ const TelegramBot = require('node-telegram-bot-api');
 const cron = require('node-cron');
 const connectDB = require('./lib/db');
 const Video = require('./models/Video');
-const {
-  morningAthkar,
-  eveningAthkar,
-  verses,
-  hadiths,
-  quotes,
+quotes,
   duas,
-  videos
+  videos,
+  fajrReminders
 } = require('./data/content');
 
 // ==========================================
@@ -162,9 +158,9 @@ const sendFajrReminder = async (targetChatId = GROUP_CHAT_ID) => {
     return;
   }
   try {
-    const message = "🔔 *تذكير بصلاة الفجر*\n\n«الصلاة خير من النوم»\nقوموا إلى صلاتكم يرحمكم الله. ✨";
+    const message = getRandomItem(fajrReminders);
     await bot.sendMessage(targetChatId, message);
-    console.log('✅ تم إرسال تذكير صلاة الفجر');
+    console.log('✅ تم إرسال تذكير صلاة الفجر بنجاح');
   } catch (error) {
     console.error('❌ خطأ في إرسال تذكير الفجر:', error.message);
   }
