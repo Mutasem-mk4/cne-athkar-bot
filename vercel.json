@@ -8,10 +8,6 @@
         {
             "path": "/api/cron/evening",
             "schedule": "0 20 * * *"
-        },
-        {
-            "path": "/api/cron/keep-alive",
-            "schedule": "*/10 * * * *"
         }
     ]
 }
