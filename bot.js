@@ -366,5 +366,6 @@ module.exports = {
   bot,
   sendMorningMessage,
   sendEveningMessage,
+  Video,
   pendingPromises
 };
