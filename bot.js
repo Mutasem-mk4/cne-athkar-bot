@@ -165,7 +165,7 @@ const sendMorningMessage = async (targetChatId = GROUP_CHAT_ID) => {
   }
   try {
     const message = formatMorningAthkar();
-    await bot.sendMessage(targetChatId, message, { parse_mode: 'Markdown' });
+    await bot.sendMessage(targetChatId, message);
     console.log('✅ تم إرسال أذكار الصباح');
   } catch (error) {
     console.error('❌ خطأ في إرسال أذكار الصباح:', error.message);
@@ -200,12 +200,12 @@ const sendEveningMessage = async (targetChatId = GROUP_CHAT_ID) => {
       // Fallback to static videos from content.js
       const staticVideo = getRandomItem(videos);
       const videoMessage = `🎬 *فيديو اليوم*\n\n${staticVideo.title}\n\n${staticVideo.url}`;
-      await bot.sendMessage(targetChatId, videoMessage, { parse_mode: 'Markdown' });
+      await bot.sendMessage(targetChatId, videoMessage);
     }
 
     // 2. Send Text Content
     const message = formatEveningContent();
-    await bot.sendMessage(targetChatId, message, { parse_mode: 'Markdown' });
+    await bot.sendMessage(targetChatId, message);
 
     console.log('✅ تم إرسال محتوى المساء');
   } catch (error) {
@@ -253,27 +253,27 @@ bot.onText(/\/help/, (msg) => {
 bot.onText(/\/thikr/, (msg) => {
   const allAthkar = [...morningAthkar, ...eveningAthkar];
   const thikr = getRandomItem(allAthkar);
-  bot.sendMessage(msg.chat.id, `📿 *ذكر*\n\n${thikr.text}\n\n📖 _${thikr.count}_`, { parse_mode: 'Markdown' });
+  bot.sendMessage(msg.chat.id, `📿 *ذكر*\n\n${thikr.text}\n\n📖 _${thikr.count}_`);
 });
 
 bot.onText(/\/hadith/, (msg) => {
   const hadith = getRandomItem(hadiths);
-  bot.sendMessage(msg.chat.id, `📜 *حديث*\n\n${hadith.hadith}\n\n📍 _${hadith.narrator}_\n\n💡 ${hadith.explanation}`, { parse_mode: 'Markdown' });
+  bot.sendMessage(msg.chat.id, `📜 *حديث*\n\n${hadith.hadith}\n\n📍 _${hadith.narrator}_\n\n💡 ${hadith.explanation}`);
 });
 
 bot.onText(/\/verse/, (msg) => {
   const verse = getRandomItem(verses);
-  bot.sendMessage(msg.chat.id, `📖 *آية*\n\n${verse.verse}\n\n📍 _${verse.surah}_\n\n💡 ${verse.tafsir}`, { parse_mode: 'Markdown' });
+  bot.sendMessage(msg.chat.id, `📖 *آية*\n\n${verse.verse}\n\n📍 _${verse.surah}_\n\n💡 ${verse.tafsir}`);
 });
 
 bot.onText(/\/dua/, (msg) => {
   const dua = getRandomItem(duas);
-  bot.sendMessage(msg.chat.id, `🤲 *دعاء*\n\n${dua}`, { parse_mode: 'Markdown' });
+  bot.sendMessage(msg.chat.id, `🤲 *دعاء*\n\n${dua}`);
 });
 
 bot.onText(/\/quote/, (msg) => {
   const quote = getRandomItem(quotes);
-  bot.sendMessage(msg.chat.id, `💭 *مقولة*\n\n${quote.quote}\n\n— _${quote.author}_`, { parse_mode: 'Markdown' });
+  bot.sendMessage(msg.chat.id, `💭 *مقولة*\n\n${quote.quote}\n\n— _${quote.author}_`);
 });
 
 bot.onText(/\/morning/, (msg) => {
