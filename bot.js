@@ -158,6 +158,21 @@ function formatEveningContent() {
 // 📤 دوال النشر (Exported for Cron/API)
 // ==========================================
 
+const sendFajrReminder = async (targetChatId = GROUP_CHAT_ID) => {
+  console.log('🕌 Starting sendFajrReminder to:', targetChatId);
+  if (!targetChatId) {
+    console.log('⚠️ لم يتم تعيين GROUP_CHAT_ID');
+    return;
+  }
+  try {
+    const message = "🔔 *تذكير بصلاة الفجر*\n\n«الصلاة خير من النوم»\nقوموا إلى صلاتكم يرحمكم الله. ✨";
+    await bot.sendMessage(targetChatId, message);
+    console.log('✅ تم إرسال تذكير صلاة الفجر');
+  } catch (error) {
+    console.error('❌ خطأ في إرسال تذكير الفجر:', error.message);
+  }
+};
+
 const sendMorningMessage = async (targetChatId = GROUP_CHAT_ID) => {
   console.log('🌅 Starting sendMorningMessage to:', targetChatId);
   if (!targetChatId) {
@@ -173,38 +188,40 @@ const sendMorningMessage = async (targetChatId = GROUP_CHAT_ID) => {
   }
 };
 
-const sendEveningMessage = async (targetChatId = GROUP_CHAT_ID) => {
-  console.log('🌙 Starting sendEveningMessage to:', targetChatId);
+const sendEveningMessage = async (targetChatId = GROUP_CHAT_ID, includeVideo = true) => {
+  console.log('🌙 Starting sendEveningMessage to:', targetChatId, 'Include Video:', includeVideo);
   if (!targetChatId) {
     console.log('⚠️ لم يتم تعيين GROUP_CHAT_ID');
     return;
   }
   try {
-    // 1. Send Video (from MongoDB or static list)
-    console.log('🔌 Connecting to DB...');
-    await connectDB();
-    console.log('✅ DB Connected.');
-    const count = await Video.countDocuments();
-    let video = null;
-
-    if (count > 0) {
-      const random = Math.floor(Math.random() * count);
-      video = await Video.findOne().skip(random);
-    }
-
-    if (video) {
+    // 1. Try to Send Video from MongoDB (Optional)
+    if (includeVideo) {
       try {
-        // Using copyMessage to hide forward header
-        await bot.copyMessage(targetChatId, video.chat_id, video.message_id);
-        console.log('✅ تم إرسال فيديو محفوظ من قاعدة البيانات');
-      } catch (e) {
-        console.error('❌ خطأ في إرسال الفيديو المحفوظ:', e.message);
+        console.log('🔌 Connecting to DB...');
+        await connectDB();
+        console.log('✅ DB Connected.');
+
+        const count = await Video.countDocuments();
+        console.log('📊 Videos in DB:', count);
+
+        if (count > 0) {
+          const randomIndex = Math.floor(Math.random() * count);
+          const video = await Video.findOne().skip(randomIndex);
+          if (video) {
+            console.log('📹 Sending video from DB:', video.title);
+            await bot.copyMessage(targetChatId, video.chat_id, video.message_id);
+            console.log('✅ Video sent.');
+          }
+        } else if (videos && videos.length > 0) {
+          console.log('📹 Sending static fallback video...');
+          const staticVideo = getRandomItem(videos);
+          const videoMessage = `🎬 *فيديو اليوم*\n\n${staticVideo.title}\n\n${staticVideo.url}`;
+          await bot.sendMessage(targetChatId, videoMessage);
+        }
+      } catch (dbError) {
+        console.error('⚠️ DB/Video Error (Skipping video):', dbError.message);
       }
-    } else if (videos.length > 0) {
-      // Fallback to static videos from content.js
-      const staticVideo = getRandomItem(videos);
-      const videoMessage = `🎬 *فيديو اليوم*\n\n${staticVideo.title}\n\n${staticVideo.url}`;
-      await bot.sendMessage(targetChatId, videoMessage);
     }
 
     // 2. Send Text Content
@@ -222,8 +239,9 @@ const sendEveningMessage = async (targetChatId = GROUP_CHAT_ID) => {
 // ==========================================
 
 if (isLocal) {
-  cron.schedule('0 5 * * *', () => sendMorningMessage(), { timezone: TIMEZONE });
-  cron.schedule('0 23 * * *', () => sendEveningMessage(), { timezone: TIMEZONE });
+  cron.schedule('30 5 * * *', () => sendFajrReminder(), { timezone: TIMEZONE });
+  cron.schedule('30 8 * * *', () => sendMorningMessage(), { timezone: TIMEZONE });
+  cron.schedule('30 17 * * *', () => sendEveningMessage(undefined, false), { timezone: TIMEZONE });
   console.log('⏰ Local Cron Jobs Scheduled');
 }
 
@@ -364,6 +382,7 @@ if (isLocal) {
 // Export for Vercel
 module.exports = {
   bot,
+  sendFajrReminder,
   sendMorningMessage,
   sendEveningMessage,
   Video,
