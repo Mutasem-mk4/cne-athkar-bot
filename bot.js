@@ -400,7 +400,7 @@ bot.onText(/\/status/, (msg) => {
 bot.on('message', async (msg) => {
   // تسجيل الجروب تلقائياً
   if (msg.chat.type === 'group' || msg.chat.type === 'supergroup') {
-    await registerGroup(msg.chat.id, msg.chat.title);
+    track(registerGroup(msg.chat.id, msg.chat.title));
   }
 
   if (msg.chat.type === 'private' && msg.video) {
