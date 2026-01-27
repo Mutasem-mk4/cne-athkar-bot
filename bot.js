@@ -296,12 +296,12 @@ bot.onText(/\/chatid/, (msg) => {
 
 bot.onText(/\/test_morning/, (msg) => {
   console.log('🧪 Testing Morning...');
-  sendMorningMessage(msg.chat.id);
+  track(sendMorningMessage(msg.chat.id));
 });
 
 bot.onText(/\/test_evening/, async (msg) => {
   console.log('🧪 Testing Evening...');
-  sendEveningMessage(msg.chat.id);
+  track(sendEveningMessage(msg.chat.id));
 });
 
 bot.onText(/\/status/, (msg) => {
