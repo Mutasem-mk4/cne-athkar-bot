@@ -321,6 +321,14 @@ bot.onText(/\/test_morning/, (msg) => {
   track(promise);
 });
 
+bot.onText(/\/test_fajr/, (msg) => {
+  console.log('🧪 Testing Fajr...');
+  const promise = sendFajrReminder(msg.chat.id)
+    .then(() => bot.sendMessage(msg.chat.id, '✅ Done fajr'))
+    .catch(err => bot.sendMessage(msg.chat.id, `❌ Error: ${err.message}`));
+  track(promise);
+});
+
 bot.onText(/\/test_evening/, async (msg) => {
   console.log('🧪 Testing Evening...');
   const promise = sendEveningMessage(msg.chat.id)
