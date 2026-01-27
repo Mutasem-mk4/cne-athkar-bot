@@ -96,7 +96,7 @@ async function getAllGroups() {
 
 // تنسيق أذكار الصباح
 function formatMorningAthkar() {
-  let message = `🌿 *إشراقة الصباح* 🌿\n\n`;
+  let message = `🌿 إشراقة الصباح 🌿\n\n`;
 
   // Select 3 random Athkar
   const selectedAthkar = [];
@@ -123,34 +123,34 @@ function formatEveningContent() {
   const contentTypes = ['verse', 'hadith', 'quote', 'evening_athkar', 'dua'];
   const selectedType = getRandomItem(contentTypes);
 
-  let message = `🌘 *همسة المساء* 🌘\n\n`;
+  let message = `🌘 همسة المساء 🌘\n\n`;
 
   switch (selectedType) {
     case 'verse':
       const verse = getRandomItem(verses);
-      message += `🕋 *آية وتفسير*\n\n`;
-      message += `📜 *${verse.verse}*\n\n`;
+      message += `🕋 آية وتفسير\n\n`;
+      message += `📜 ${verse.verse}\n\n`;
       message += `📒 التفسير: ${verse.tafsir}\n`;
-      message += `📍 _${verse.surah}_`;
+      message += `📍 ${verse.surah}`;
       break;
 
     case 'hadith':
       const hadith = getRandomItem(hadiths);
-      message += `🕌 *حديث شريف*\n\n`;
-      message += `📜 *${hadith.hadith}*\n\n`;
+      message += `🕌 حديث شريف\n\n`;
+      message += `📜 ${hadith.hadith}\n\n`;
       message += `📒 الشرح: ${hadith.explanation}\n`;
-      message += `📍 _${hadith.narrator}_`;
+      message += `📍 ${hadith.narrator}`;
       break;
 
     case 'quote':
       const quote = getRandomItem(quotes);
-      message += `💡 *خاطرة*\n\n`;
+      message += `💡 خاطرة\n\n`;
       message += `"${quote.quote}"\n\n`;
-      message += `✒️ _${quote.author}_`;
+      message += `✒️ ${quote.author}`;
       break;
 
     case 'evening_athkar':
-      message += `📿 *من أذكار المساء*\n\n`;
+      message += `📿 من أذكار المساء\n\n`;
       const selectedEveningAthkar = [];
       const shuffled = [...eveningAthkar].sort(() => 0.5 - Math.random());
       for (let i = 0; i < Math.min(3, shuffled.length); i++) {
@@ -164,7 +164,7 @@ function formatEveningContent() {
 
     case 'dua':
       const dua = getRandomItem(duas);
-      message += `🤲 *دعاء*\n\n`;
+      message += `🤲 دعاء\n\n`;
       message += `${dua}`;
       break;
   }
@@ -183,7 +183,7 @@ const sendFajrReminder = async (targetChatId) => {
     console.log('🕌 Sending single FajrReminder to:', targetChatId);
     try {
       const randomMsg = getRandomItem(fajrReminders);
-      const message = `🕌 *صلاة الفجر*\n\n${randomMsg}\n\nتقبل الله طاعاتكم 🤲`;
+      const message = `🕌 صلاة الفجر\n\n${randomMsg}\n\nتقبل الله طاعاتكم 🤲`;
       await bot.sendMessage(targetChatId, message);
     } catch (e) {
       console.error('❌ Error sending single Fajr:', e.message);
@@ -197,7 +197,7 @@ const sendFajrReminder = async (targetChatId) => {
   for (const id of chatIds) {
     try {
       const randomMsg = getRandomItem(fajrReminders);
-      const message = `🕌 *صلاة الفجر*\n\n${randomMsg}\n\nتقبل الله طاعاتكم 🤲`;
+      const message = `🕌 صلاة الفجر\n\n${randomMsg}\n\nتقبل الله طاعاتكم 🤲`;
       await bot.sendMessage(id, message);
       console.log(`✅ Fajr sent to group: ${id}`);
     } catch (error) {
@@ -252,14 +252,14 @@ const sendMidnightReminder = async (targetChatId) => {
   const types = ['verse', 'hadith', 'dua'];
   const type = getRandomItem(types);
 
-  let message = `🌑 *همسة آخر الليل* 🌑\n\n`;
+  let message = `🌑 همسة آخر الليل 🌑\n\n`;
 
   if (type === 'verse') {
     const v = getRandomItem(verses);
-    message += `📜 *${v.verse}*\n\n${v.tafsir}\n📍 _${v.surah}_`;
+    message += `📜 ${v.verse}\n\n${v.tafsir}\n📍 ${v.surah}`;
   } else if (type === 'hadith') {
     const h = getRandomItem(hadiths);
-    message += `🕌 *${h.hadith}*\n\n${h.explanation}\n📍 _${h.narrator}_`;
+    message += `🕌 ${h.hadith}\n\n${h.explanation}\n📍 ${h.narrator}`;
   } else {
     message += `🤲 ${getRandomItem(duas)}`;
   }
