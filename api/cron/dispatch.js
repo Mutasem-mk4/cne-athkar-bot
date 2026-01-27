@@ -8,20 +8,26 @@ module.exports = async (req, res) => {
 
         console.log(`⏰ Cron triggered at ${hour}:${minute} UTC`);
 
-        // 2:30 UTC -> 5:30 Amman (Fajr)
-        if (hour === 2) {
+        // 03:00 UTC -> 6:00 Amman (Fajr)
+        if (hour === 3) {
             console.log('🕌 Dispatching Fajr Reminder...');
             await sendFajrReminder();
         }
-        // 5:30 UTC -> 8:30 Amman (Morning)
+        // 05:00 UTC -> 8:00 Amman (Morning)
         else if (hour === 5) {
             console.log('🌅 Dispatching Morning Athkar...');
             await sendMorningMessage();
         }
-        // 14:30 UTC -> 17:30 Amman (Evening)
-        else if (hour === 14) {
+        // 15:00 UTC -> 18:00 Amman (Evening)
+        else if (hour === 15) {
             console.log('🌙 Dispatching Evening Athkar...');
             await sendEveningMessage(undefined, false);
+        }
+        // 21:00 UTC -> 00:00 Amman (Midnight)
+        else if (hour === 21) {
+            console.log('🌑 Dispatching Midnight Reminder...');
+            const { sendMidnightReminder } = require('../../bot');
+            await sendMidnightReminder();
         } else {
             console.log('ℹ️ No task scheduled for this hour.');
         }

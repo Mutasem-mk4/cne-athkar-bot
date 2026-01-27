@@ -1,0 +1,17 @@
+const { sendMidnightReminder, pendingPromises } = require('../../bot');
+
+module.exports = async (req, res) => {
+    try {
+        console.log('🌑 Running Midnight Cron...');
+        await sendMidnightReminder();
+
+        if (pendingPromises && pendingPromises.length > 0) {
+            await Promise.all(pendingPromises);
+        }
+
+        res.status(200).json({ status: 'success' });
+    } catch (error) {
+        console.error('Midnight Cron Error:', error);
+        res.status(500).json({ error: error.message });
+    }
+};

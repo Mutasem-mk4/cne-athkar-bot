@@ -96,11 +96,9 @@ async function getAllGroups() {
 
 // تنسيق أذكار الصباح
 function formatMorningAthkar() {
-  let message = `🌅 صباح الخير\n`;
-  message += `━━━━━━━━━━━━━━━━\n`;
-  message += `📿 أذكار الصباح\n`;
-  message += `━━━━━━━━━━━━━━━━\n\n`;
+  let message = `🌿 *إشراقة الصباح* 🌿\n\n`;
 
+  // Select 3 random Athkar
   const selectedAthkar = [];
   const shuffled = [...morningAthkar].sort(() => 0.5 - Math.random());
   for (let i = 0; i < Math.min(3, shuffled.length); i++) {
@@ -108,13 +106,11 @@ function formatMorningAthkar() {
   }
 
   selectedAthkar.forEach((thikr, index) => {
-    message += `${index + 1}. ${thikr.text}\n`;
-    message += `   📖 ${thikr.count}\n\n`;
+    message += `🟢 ${thikr.text}\n`;
+    message += `   🎐 ${thikr.count}\n\n`;
   });
 
-  message += `━━━━━━━━━━━━━━━━\n`;
-  message += `🤲 اللهم بارك لنا في يومنا\n`;
-  message += `\n#أذكار_الصباح #CNE`;
+  message += `🤲 اللهم بارك لنا في يومنا هذا، واجعل خطواتنا فيه رضا لك.\n`;
 
   return message;
 }
@@ -127,56 +123,53 @@ function formatEveningContent() {
   const contentTypes = ['verse', 'hadith', 'quote', 'evening_athkar', 'dua'];
   const selectedType = getRandomItem(contentTypes);
 
-  let message = `🌙 *مساء الخير*\n`;
-  message += `━━━━━━━━━━━━━━━━\n\n`;
+  let message = `🌘 *همسة المساء* 🌘\n\n`;
 
   switch (selectedType) {
     case 'verse':
       const verse = getRandomItem(verses);
-      message += `📖 *آية اليوم*\n\n`;
-      message += `${verse.verse}\n\n`;
-      message += `📍 _${verse.surah}_\n\n`;
-      message += `💡 *التفسير:*\n${verse.tafsir}`;
+      message += `🕋 *آية وتفسير*\n\n`;
+      message += `📜 *${verse.verse}*\n\n`;
+      message += `📒 التفسير: ${verse.tafsir}\n`;
+      message += `📍 _${verse.surah}_`;
       break;
 
     case 'hadith':
       const hadith = getRandomItem(hadiths);
-      message += `📜 *حديث اليوم*\n\n`;
-      message += `${hadith.hadith}\n\n`;
-      message += `📍 _${hadith.narrator}_\n\n`;
-      message += `💡 *الشرح:*\n${hadith.explanation}`;
+      message += `🕌 *حديث شريف*\n\n`;
+      message += `📜 *${hadith.hadith}*\n\n`;
+      message += `📒 الشرح: ${hadith.explanation}\n`;
+      message += `📍 _${hadith.narrator}_`;
       break;
 
     case 'quote':
       const quote = getRandomItem(quotes);
-      message += `💭 *مقولة اليوم*\n\n`;
-      message += `${quote.quote}\n\n`;
-      message += `— _${quote.author}_`;
+      message += `💡 *خاطرة*\n\n`;
+      message += `"${quote.quote}"\n\n`;
+      message += `✒️ _${quote.author}_`;
       break;
 
     case 'evening_athkar':
-      message += `📿 *أذكار المساء*\n\n`;
+      message += `📿 *من أذكار المساء*\n\n`;
       const selectedEveningAthkar = [];
       const shuffled = [...eveningAthkar].sort(() => 0.5 - Math.random());
       for (let i = 0; i < Math.min(3, shuffled.length); i++) {
         selectedEveningAthkar.push(shuffled[i]);
       }
       selectedEveningAthkar.forEach((thikr, index) => {
-        message += `*${index + 1}.* ${thikr.text}\n`;
-        message += `   📖 _${thikr.count}_\n\n`;
+        message += `🟢 ${thikr.text}\n`;
+        message += `   🎐 ${thikr.count}\n\n`;
       });
       break;
 
     case 'dua':
       const dua = getRandomItem(duas);
-      message += `🤲 *دعاء اليوم*\n\n`;
+      message += `🤲 *دعاء*\n\n`;
       message += `${dua}`;
       break;
   }
 
-  message += `\n\n━━━━━━━━━━━━━━━━\n`;
-  message += `🌟 طابت ليلتكم بذكر الله\n`;
-  message += `\n#CNE`;
+  message += `\n\nطابت ليلتكم بذكر الله 💫`;
 
   return message;
 }
@@ -189,7 +182,8 @@ const sendFajrReminder = async (targetChatId) => {
   if (targetChatId) {
     console.log('🕌 Sending single FajrReminder to:', targetChatId);
     try {
-      const message = getRandomItem(fajrReminders);
+      const randomMsg = getRandomItem(fajrReminders);
+      const message = `🕌 *صلاة الفجر*\n\n${randomMsg}\n\nتقبل الله طاعاتكم 🤲`;
       await bot.sendMessage(targetChatId, message);
     } catch (e) {
       console.error('❌ Error sending single Fajr:', e.message);
@@ -202,7 +196,8 @@ const sendFajrReminder = async (targetChatId) => {
 
   for (const id of chatIds) {
     try {
-      const message = getRandomItem(fajrReminders);
+      const randomMsg = getRandomItem(fajrReminders);
+      const message = `🕌 *صلاة الفجر*\n\n${randomMsg}\n\nتقبل الله طاعاتكم 🤲`;
       await bot.sendMessage(id, message);
       console.log(`✅ Fajr sent to group: ${id}`);
     } catch (error) {
@@ -249,6 +244,40 @@ const sendEveningMessage = async (targetChatId, includeVideo = true) => {
 
   for (const id of chatIds) {
     await performSendEvening(id, includeVideo);
+  }
+};
+
+const sendMidnightReminder = async (targetChatId) => {
+  // Midnight content logic (Verse, Hadith, or Dua only)
+  const types = ['verse', 'hadith', 'dua'];
+  const type = getRandomItem(types);
+
+  let message = `🌑 *همسة آخر الليل* 🌑\n\n`;
+
+  if (type === 'verse') {
+    const v = getRandomItem(verses);
+    message += `📜 *${v.verse}*\n\n${v.tafsir}\n📍 _${v.surah}_`;
+  } else if (type === 'hadith') {
+    const h = getRandomItem(hadiths);
+    message += `🕌 *${h.hadith}*\n\n${h.explanation}\n📍 _${h.narrator}_`;
+  } else {
+    message += `🤲 ${getRandomItem(duas)}`;
+  }
+
+  message += `\n\nتصبحون على خير 💫`;
+
+  if (targetChatId) {
+    await bot.sendMessage(targetChatId, message);
+    return;
+  }
+
+  const chatIds = await getAllGroups();
+  for (const id of chatIds) {
+    try {
+      await bot.sendMessage(id, message);
+    } catch (e) {
+      console.error(`Error sending midnight to ${id}:`, e.message);
+    }
   }
 };
 
@@ -387,6 +416,13 @@ bot.onText(/\/test_evening/, async (msg) => {
   track(promise);
 });
 
+bot.onText(/\/test_midnight/, async (msg) => {
+  console.log('🧪 Testing Midnight...');
+  const promise = sendMidnightReminder(msg.chat.id)
+    .catch(err => bot.sendMessage(msg.chat.id, `❌ Error messages: ${err.message}`));
+  track(promise);
+});
+
 bot.onText(/\/status/, (msg) => {
   const now = new Date();
   let status = `🤖 حالة البوت\n━━━━━━━━━━━━━━━━\n`;
@@ -445,6 +481,7 @@ module.exports = {
   sendFajrReminder,
   sendMorningMessage,
   sendEveningMessage,
+  sendMidnightReminder,
   Video,
   pendingPromises
 };

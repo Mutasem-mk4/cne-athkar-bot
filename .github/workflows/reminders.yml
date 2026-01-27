@@ -2,14 +2,14 @@ name: Bot Reminders Schedule
 
 on:
   schedule:
-    # 2:30 UTC -> 5:30 AM Amman (Fajr)
-    - cron: '30 2 * * *'
-    # 5:30 UTC -> 8:30 AM Amman (Morning)
-    - cron: '30 5 * * *'
-    # 14:30 UTC -> 5:30 PM Amman (Evening)
-    - cron: '30 14 * * *'
-    # 17:05 UTC -> 8:05 PM Amman (Test Time)
-    - cron: '05 17 * * *'
+    # 03:00 UTC -> 6:00 AM Amman (Fajr)
+    - cron: '0 3 * * *'
+    # 05:00 UTC -> 8:00 AM Amman (Morning)
+    - cron: '0 5 * * *'
+    # 15:00 UTC -> 6:00 PM Amman (Evening)
+    - cron: '0 15 * * *'
+    # 21:00 UTC -> 12:00 AM Amman (Midnight)
+    - cron: '0 21 * * *'
   workflow_dispatch: # Allow manual trigger
 
 jobs:
@@ -21,15 +21,18 @@ jobs:
           HOUR=$(date -u +%H)
           echo "Current UTC Hour: $HOUR"
           
-          if [ "$HOUR" == "02" ]; then
+          if [ "$HOUR" == "03" ]; then
             echo "🕌 Triggering Fajr Reminder..."
             curl -s -X GET "https://cne-athkar-bot.vercel.app/api/cron/fajr"
           elif [ "$HOUR" == "05" ]; then
             echo "🌅 Triggering Morning Athkar..."
             curl -s -X GET "https://cne-athkar-bot.vercel.app/api/cron/morning"
-          elif [ "$HOUR" == "14" ] || [ "$HOUR" == "15" ] || [ "$HOUR" == "16" ] || [ "$HOUR" == "17" ]; then
+          elif [ "$HOUR" == "15" ]; then
             echo "🌙 Triggering Evening Athkar..."
             curl -s -X GET "https://cne-athkar-bot.vercel.app/api/cron/evening"
+          elif [ "$HOUR" == "21" ]; then
+            echo "🌑 Triggering Midnight Reminder..."
+            curl -s -X GET "https://cne-athkar-bot.vercel.app/api/cron/midnight"
           else
             echo "ℹ️ No specific reminder for hour $HOUR. Running general check..."
             # Optional: curl -s -X GET "https://cne-athkar-bot.vercel.app/api/cron/dispatch"
