@@ -1,0 +1,34 @@
+name: Bot Reminders Schedule
+
+on:
+  schedule:
+    # 2:30 UTC -> 5:30 AM Amman (Fajr)
+    - cron: '30 2 * * *'
+    # 5:30 UTC -> 8:30 AM Amman (Morning)
+    - cron: '30 5 * * *'
+    # 14:30 UTC -> 5:30 PM Amman (Evening)
+    - cron: '30 14 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  ping-endpoints:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Reminder
+        run: |
+          HOUR=$(date -u +%H)
+          echo "Current UTC Hour: $HOUR"
+          
+          if [ "$HOUR" == "02" ]; then
+            echo "🕌 Triggering Fajr Reminder..."
+            curl -s -X GET "https://cne-athkar-bot.vercel.app/api/cron/fajr"
+          elif [ "$HOUR" == "05" ]; then
+            echo "🌅 Triggering Morning Athkar..."
+            curl -s -X GET "https://cne-athkar-bot.vercel.app/api/cron/morning"
+          elif [ "$HOUR" == "14" ]; then
+            echo "🌙 Triggering Evening Athkar..."
+            curl -s -X GET "https://cne-athkar-bot.vercel.app/api/cron/evening"
+          else
+            echo "ℹ️ No specific reminder for hour $HOUR. Running general check..."
+            # Optional: curl -s -X GET "https://cne-athkar-bot.vercel.app/api/cron/dispatch"
+          fi
