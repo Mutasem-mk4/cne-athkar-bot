@@ -365,27 +365,27 @@ bot.onText(/\/help/, (msg) => {
 bot.onText(/\/thikr/, (msg) => {
   const allAthkar = [...morningAthkar, ...eveningAthkar];
   const thikr = getRandomItem(allAthkar);
-  bot.sendMessage(msg.chat.id, `📿 *ذكر*\n\n${thikr.text}\n\n📖 _${thikr.count}_`);
+  bot.sendMessage(msg.chat.id, `📿 ذكر\n\n${thikr.text}\n\n📖 ${thikr.count}`);
 });
 
 bot.onText(/\/hadith/, (msg) => {
   const hadith = getRandomItem(hadiths);
-  bot.sendMessage(msg.chat.id, `📜 *حديث*\n\n${hadith.hadith}\n\n📍 _${hadith.narrator}_\n\n💡 ${hadith.explanation}`);
+  bot.sendMessage(msg.chat.id, `🕌 حديث شريف\n\n${hadith.hadith}\n\n📍 ${hadith.narrator}\n\n💡 الشرح: ${hadith.explanation}`);
 });
 
 bot.onText(/\/verse/, (msg) => {
   const verse = getRandomItem(verses);
-  bot.sendMessage(msg.chat.id, `📖 *آية*\n\n${verse.verse}\n\n📍 _${verse.surah}_\n\n💡 ${verse.tafsir}`);
+  bot.sendMessage(msg.chat.id, `🕋 آية وتفسير\n\n${verse.verse}\n\n📍 ${verse.surah}\n\n📒 التفسير: ${verse.tafsir}`);
 });
 
 bot.onText(/\/dua/, (msg) => {
   const dua = getRandomItem(duas);
-  bot.sendMessage(msg.chat.id, `🤲 *دعاء*\n\n${dua}`);
+  bot.sendMessage(msg.chat.id, `🤲 دعاء\n\n${dua}`);
 });
 
 bot.onText(/\/quote/, (msg) => {
   const quote = getRandomItem(quotes);
-  bot.sendMessage(msg.chat.id, `💭 *مقولة*\n\n${quote.quote}\n\n— _${quote.author}_`);
+  bot.sendMessage(msg.chat.id, `💡 خاطرة\n\n"${quote.quote}"\n\n✒️ ${quote.author}`);
 });
 
 bot.onText(/\/morning/, (msg) => {
