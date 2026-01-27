@@ -242,12 +242,12 @@ bot.onText(/\/start/, (msg) => {
 /evening - أذكار المساء
 /help - المساعدة
   `;
-  bot.sendMessage(chatId, welcomeMessage, { parse_mode: 'Markdown' });
+  bot.sendMessage(chatId, welcomeMessage);
 });
 
 bot.onText(/\/help/, (msg) => {
   const helpMessage = `📚 *دليل استخدام البوت*\n\n/thikr - ذكر\n/morning - أذكار الصباح\n/evening - أذكار المساء\n...`;
-  bot.sendMessage(msg.chat.id, helpMessage, { parse_mode: 'Markdown' });
+  bot.sendMessage(msg.chat.id, helpMessage);
 });
 
 bot.onText(/\/thikr/, (msg) => {
