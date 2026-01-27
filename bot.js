@@ -7,6 +7,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const cron = require('node-cron');
 const connectDB = require('./lib/db');
 const Video = require('./models/Video');
+const Group = require('./models/Group');
 const {
   morningAthkar,
   eveningAthkar,
@@ -64,6 +65,34 @@ function track(promise) {
 // ==========================================
 // 🛠️ دوال مساعدة
 // ==========================================
+
+// تسجيل الجروب في قاعدة البيانات
+async function registerGroup(chatId, title) {
+  if (!chatId || (typeof chatId === 'string' && chatId.startsWith('-100') === false && chatId.startsWith('-') === false)) return;
+  try {
+    await connectDB();
+    await Group.findOneAndUpdate(
+      { chat_id: chatId.toString() },
+      { title: title || 'Group' },
+      { upsert: true }
+    );
+  } catch (error) {
+    console.error('❌ Error registering group:', error.message);
+  }
+}
+
+async function getAllGroups() {
+  try {
+    await connectDB();
+    const dbGroups = await Group.find();
+    const chatIds = new Set(dbGroups.map(g => g.chat_id));
+    if (GROUP_CHAT_ID) chatIds.add(GROUP_CHAT_ID.toString());
+    return Array.from(chatIds);
+  } catch (error) {
+    console.error('❌ Error fetching groups:', error.message);
+    return GROUP_CHAT_ID ? [GROUP_CHAT_ID.toString()] : [];
+  }
+}
 
 // تنسيق أذكار الصباح
 function formatMorningAthkar() {
@@ -156,63 +185,87 @@ function formatEveningContent() {
 // 📤 دوال النشر (Exported for Cron/API)
 // ==========================================
 
-const sendFajrReminder = async (targetChatId = GROUP_CHAT_ID) => {
-  console.log('🕌 Starting sendFajrReminder to:', targetChatId);
-  if (!targetChatId) {
-    console.log('⚠️ لم يتم تعيين GROUP_CHAT_ID');
+const sendFajrReminder = async (targetChatId) => {
+  if (targetChatId) {
+    console.log('🕌 Sending single FajrReminder to:', targetChatId);
+    try {
+      const message = getRandomItem(fajrReminders);
+      await bot.sendMessage(targetChatId, message);
+    } catch (e) {
+      console.error('❌ Error sending single Fajr:', e.message);
+    }
     return;
   }
-  try {
-    const message = getRandomItem(fajrReminders);
-    await bot.sendMessage(targetChatId, message);
-    console.log('✅ تم إرسال تذكير صلاة الفجر بنجاح');
-  } catch (error) {
-    console.error('❌ خطأ في إرسال تذكير الفجر:', error.message);
+
+  const chatIds = await getAllGroups();
+  console.log('🕌 Starting bulk sendFajrReminder to:', chatIds.length, 'groups');
+
+  for (const id of chatIds) {
+    try {
+      const message = getRandomItem(fajrReminders);
+      await bot.sendMessage(id, message);
+      console.log(`✅ Fajr sent to group: ${id}`);
+    } catch (error) {
+      console.error(`❌ Error sending Fajr to ${id}:`, error.message);
+    }
   }
 };
 
-const sendMorningMessage = async (targetChatId = GROUP_CHAT_ID) => {
-  console.log('🌅 Starting sendMorningMessage to:', targetChatId);
-  if (!targetChatId) {
-    console.log('⚠️ لم يتم تعيين GROUP_CHAT_ID');
+const sendMorningMessage = async (targetChatId) => {
+  if (targetChatId) {
+    console.log('🌅 Sending single MorningMessage to:', targetChatId);
+    try {
+      const message = formatMorningAthkar();
+      await bot.sendMessage(targetChatId, message);
+    } catch (e) {
+      console.error('❌ Error sending single Morning:', e.message);
+    }
     return;
   }
-  try {
-    const message = formatMorningAthkar();
-    await bot.sendMessage(targetChatId, message);
-    console.log('✅ تم إرسال أذكار الصباح');
-  } catch (error) {
-    console.error('❌ خطأ في إرسال أذكار الصباح:', error.message);
+
+  const chatIds = await getAllGroups();
+  console.log('🌅 Starting bulk sendMorningMessage to:', chatIds.length, 'groups');
+
+  for (const id of chatIds) {
+    try {
+      const message = formatMorningAthkar();
+      await bot.sendMessage(id, message);
+      console.log(`✅ Morning sent to group: ${id}`);
+    } catch (error) {
+      console.error(`❌ Error sending Morning to ${id}:`, error.message);
+    }
   }
 };
 
-const sendEveningMessage = async (targetChatId = GROUP_CHAT_ID, includeVideo = true) => {
-  console.log('🌙 Starting sendEveningMessage to:', targetChatId, 'Include Video:', includeVideo);
-  if (!targetChatId) {
-    console.log('⚠️ لم يتم تعيين GROUP_CHAT_ID');
+const sendEveningMessage = async (targetChatId, includeVideo = true) => {
+  if (targetChatId) {
+    console.log('🌙 Sending single EveningMessage to:', targetChatId);
+    await performSendEvening(targetChatId, includeVideo);
     return;
   }
+
+  const chatIds = await getAllGroups();
+  console.log('🌙 Starting bulk sendEveningMessage to:', chatIds.length, 'groups');
+
+  for (const id of chatIds) {
+    await performSendEvening(id, includeVideo);
+  }
+};
+
+async function performSendEvening(targetChatId, includeVideo) {
   try {
     // 1. Try to Send Video from MongoDB (Optional)
     if (includeVideo) {
       try {
-        console.log('🔌 Connecting to DB...');
         await connectDB();
-        console.log('✅ DB Connected.');
-
         const count = await Video.countDocuments();
-        console.log('📊 Videos in DB:', count);
-
         if (count > 0) {
           const randomIndex = Math.floor(Math.random() * count);
           const video = await Video.findOne().skip(randomIndex);
           if (video) {
-            console.log('📹 Sending video from DB:', video.title);
             await bot.copyMessage(targetChatId, video.chat_id, video.message_id);
-            console.log('✅ Video sent.');
           }
         } else if (videos && videos.length > 0) {
-          console.log('📹 Sending static fallback video...');
           const staticVideo = getRandomItem(videos);
           const videoMessage = `🎬 *فيديو اليوم*\n\n${staticVideo.title}\n\n${staticVideo.url}`;
           await bot.sendMessage(targetChatId, videoMessage);
@@ -225,12 +278,11 @@ const sendEveningMessage = async (targetChatId = GROUP_CHAT_ID, includeVideo = t
     // 2. Send Text Content
     const message = formatEveningContent();
     await bot.sendMessage(targetChatId, message);
-
-    console.log('✅ تم إرسال محتوى المساء');
+    console.log(`✅ Evening sent to group: ${targetChatId}`);
   } catch (error) {
-    console.error('❌ خطأ في إرسال محتوى المساء:', error.message);
+    console.error(`❌ Error sending Evening to ${targetChatId}:`, error.message);
   }
-};
+}
 
 // ==========================================
 // ⏰ النشر التلقائي والمحلي (Local Cron)
@@ -344,8 +396,13 @@ bot.onText(/\/status/, (msg) => {
   bot.sendMessage(msg.chat.id, status);
 });
 
-// حفظ الفيديوهات من الخاص (MongoDB)
+// حفظ الفيديوهات من الخاص (MongoDB) وتلقي رسائل الجروبات للتسجيل
 bot.on('message', async (msg) => {
+  // تسجيل الجروب تلقائياً
+  if (msg.chat.type === 'group' || msg.chat.type === 'supergroup') {
+    await registerGroup(msg.chat.id, msg.chat.title);
+  }
+
   if (msg.chat.type === 'private' && msg.video) {
     // Track this async operation as well
     const op = (async () => {
