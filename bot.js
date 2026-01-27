@@ -317,7 +317,6 @@ bot.onText(/\/chatid/, (msg) => {
 bot.onText(/\/test_morning/, (msg) => {
   console.log('🧪 Testing Morning...');
   const promise = sendMorningMessage(msg.chat.id)
-    .then(() => bot.sendMessage(msg.chat.id, '✅ Done morning'))
     .catch(err => bot.sendMessage(msg.chat.id, `❌ Error: ${err.message}`));
   track(promise);
 });
@@ -325,7 +324,6 @@ bot.onText(/\/test_morning/, (msg) => {
 bot.onText(/\/test_fajr/, (msg) => {
   console.log('🧪 Testing Fajr...');
   const promise = sendFajrReminder(msg.chat.id)
-    .then(() => bot.sendMessage(msg.chat.id, '✅ Done fajr'))
     .catch(err => bot.sendMessage(msg.chat.id, `❌ Error: ${err.message}`));
   track(promise);
 });
@@ -333,7 +331,6 @@ bot.onText(/\/test_fajr/, (msg) => {
 bot.onText(/\/test_evening/, async (msg) => {
   console.log('🧪 Testing Evening...');
   const promise = sendEveningMessage(msg.chat.id)
-    .then(() => bot.sendMessage(msg.chat.id, '✅ Done evening'))
     .catch(err => bot.sendMessage(msg.chat.id, `❌ Error: ${err.message}`));
   track(promise);
 });
@@ -342,7 +339,7 @@ bot.onText(/\/status/, (msg) => {
   const now = new Date();
   let status = `🤖 حالة البوت\n━━━━━━━━━━━━━━━━\n`;
   status += `✅ البوت يعمل (${isLocal ? 'Local' : 'Serverless'})\n`;
-  status += `⏰ الوقت: ${now.toLocaleTimeString('ar-EG')}\n`;
+  status += `⏰ الوقت: ${now.toLocaleTimeString('ar-EG', { timeZone: TIMEZONE })}\n`;
   status += `🗄️ التخزين: MongoDB\n`;
   bot.sendMessage(msg.chat.id, status);
 });
