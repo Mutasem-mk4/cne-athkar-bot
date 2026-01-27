@@ -294,14 +294,20 @@ bot.onText(/\/chatid/, (msg) => {
   bot.sendMessage(msg.chat.id, `📍 Chat ID: \`${msg.chat.id}\``, { parse_mode: 'Markdown' });
 });
 
-bot.onText(/\/test_morning/, (msg) => {
+bot.onText(/\/test_morning/, async (msg) => {
   console.log('🧪 Testing Morning...');
-  track(sendMorningMessage(msg.chat.id));
+  const promise = sendMorningMessage(msg.chat.id)
+    .then(() => bot.sendMessage(msg.chat.id, '✅ Done morning'))
+    .catch(err => bot.sendMessage(msg.chat.id, `❌ Error: ${err.message}`));
+  track(promise);
 });
 
 bot.onText(/\/test_evening/, async (msg) => {
   console.log('🧪 Testing Evening...');
-  track(sendEveningMessage(msg.chat.id));
+  const promise = sendEveningMessage(msg.chat.id)
+    .then(() => bot.sendMessage(msg.chat.id, '✅ Done evening'))
+    .catch(err => bot.sendMessage(msg.chat.id, `❌ Error: ${err.message}`));
+  track(promise);
 });
 
 bot.onText(/\/status/, (msg) => {
