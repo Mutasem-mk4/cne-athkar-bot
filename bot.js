@@ -284,6 +284,8 @@ const sendMidnightReminder = async (targetChatId) => {
 async function performSendEvening(targetChatId, includeVideo) {
   try {
     // 1. Try to Send Video from MongoDB (Optional)
+    // ⚠️ User requested NO videos at night/evening. Logic disabled.
+    /*
     if (includeVideo) {
       try {
         await connectDB();
@@ -303,6 +305,7 @@ async function performSendEvening(targetChatId, includeVideo) {
         console.error('⚠️ DB/Video Error (Skipping video):', dbError.message);
       }
     }
+    */
 
     // 2. Send Text Content
     const message = formatEveningContent();
