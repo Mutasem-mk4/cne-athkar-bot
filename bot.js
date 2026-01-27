@@ -115,15 +115,35 @@ function formatMorningAthkar() {
   return message;
 }
 
+// تنسيق أذكار المساء (قائمة فقط)
+function formatEveningAthkar() {
+  let message = `🌒 همسة المساء 🌒\n\n`;
+
+  const selectedAthkar = [];
+  const shuffled = [...eveningAthkar].sort(() => 0.5 - Math.random());
+  for (let i = 0; i < Math.min(3, shuffled.length); i++) {
+    selectedAthkar.push(shuffled[i]);
+  }
+
+  selectedAthkar.forEach((thikr, index) => {
+    message += `🟢 ${thikr.text}\n`;
+    message += `   🎐 ${thikr.count}\n\n`;
+  });
+
+  message += `🤲 أمسينا وأمسى الملك لله.\n`;
+
+  return message;
+}
+
 function getRandomItem(array) {
   return array[Math.floor(Math.random() * array.length)];
 }
 
-function formatEveningContent() {
-  const contentTypes = ['verse', 'hadith', 'quote', 'evening_athkar', 'dua'];
+function formatMidnightContent() {
+  const contentTypes = ['verse', 'hadith', 'quote', 'dua'];
   const selectedType = getRandomItem(contentTypes);
 
-  let message = `🌘 همسة المساء 🌘\n\n`;
+  let message = `🌑 همسة آخر الليل 🌑\n\n`;
 
   switch (selectedType) {
     case 'verse':
@@ -149,19 +169,6 @@ function formatEveningContent() {
       message += `✒️ ${quote.author}`;
       break;
 
-    case 'evening_athkar':
-      message += `📿 من أذكار المساء\n\n`;
-      const selectedEveningAthkar = [];
-      const shuffled = [...eveningAthkar].sort(() => 0.5 - Math.random());
-      for (let i = 0; i < Math.min(3, shuffled.length); i++) {
-        selectedEveningAthkar.push(shuffled[i]);
-      }
-      selectedEveningAthkar.forEach((thikr, index) => {
-        message += `🟢 ${thikr.text}\n`;
-        message += `   🎐 ${thikr.count}\n\n`;
-      });
-      break;
-
     case 'dua':
       const dua = getRandomItem(duas);
       message += `🤲 دعاء\n\n`;
@@ -169,7 +176,7 @@ function formatEveningContent() {
       break;
   }
 
-  message += `\n\nطابت ليلتكم بذكر الله 💫`;
+  message += `\n\nتصبحون على خير 💫`;
 
   return message;
 }
@@ -308,7 +315,8 @@ async function performSendEvening(targetChatId, includeVideo) {
     */
 
     // 2. Send Text Content
-    const message = formatEveningContent();
+    // Evening now strictly sends Athkar list, no random content.
+    const message = formatEveningAthkar();
     await bot.sendMessage(targetChatId, message);
     console.log(`✅ Evening sent to group: ${targetChatId}`);
   } catch (error) {
