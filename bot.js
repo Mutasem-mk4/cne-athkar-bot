@@ -329,9 +329,9 @@ async function performSendEvening(targetChatId, includeVideo) {
 // ==========================================
 
 if (isLocal) {
-  cron.schedule('30 5 * * *', () => sendFajrReminder(), { timezone: TIMEZONE });
-  cron.schedule('30 8 * * *', () => sendMorningMessage(), { timezone: TIMEZONE });
-  cron.schedule('30 17 * * *', () => sendEveningMessage(undefined, false), { timezone: TIMEZONE });
+  cron.schedule('00 5 * * *', () => sendFajrReminder(), { timezone: TIMEZONE });
+  cron.schedule('00 8 * * *', () => sendMorningMessage(), { timezone: TIMEZONE });
+  cron.schedule('00 17 * * *', () => sendEveningMessage(undefined, false), { timezone: TIMEZONE });
   console.log('⏰ Local Cron Jobs Scheduled');
 }
 
