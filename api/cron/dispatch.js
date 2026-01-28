@@ -1,4 +1,10 @@
-const { sendFajrReminder, sendMorningMessage, sendEveningMessage, pendingPromises } = require('../../bot');
+const {
+    sendFajrReminder,
+    sendMorningMessage,
+    sendEveningMessage,
+    sendMidnightReminder,
+    pendingPromises
+} = require('../../bot');
 
 module.exports = async (req, res) => {
     try {
@@ -26,7 +32,6 @@ module.exports = async (req, res) => {
         // 21:00 UTC -> 00:00 Amman (Midnight)
         else if (hour === 21) {
             console.log('🌑 Dispatching Midnight Reminder...');
-            const { sendMidnightReminder } = require('../../bot');
             await sendMidnightReminder();
         } else {
             console.log('ℹ️ No task scheduled for this hour.');

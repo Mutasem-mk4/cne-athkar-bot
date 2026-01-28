@@ -16,24 +16,7 @@ jobs:
   ping-endpoints:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Reminder
+      - name: Trigger Dispatcher
         run: |
-          HOUR=$(date -u +%H)
-          echo "Current UTC Hour: $HOUR"
-          
-          if [ "$HOUR" == "03" ]; then
-            echo "🕌 Triggering Fajr Reminder..."
-            curl -s -X GET "https://cne-athkar-bot.vercel.app/api/cron/fajr"
-          elif [ "$HOUR" == "05" ]; then
-            echo "🌅 Triggering Morning Athkar..."
-            curl -s -X GET "https://cne-athkar-bot.vercel.app/api/cron/morning"
-          elif [ "$HOUR" == "15" ]; then
-            echo "🌙 Triggering Evening Athkar..."
-            curl -s -X GET "https://cne-athkar-bot.vercel.app/api/cron/evening"
-          elif [ "$HOUR" == "21" ]; then
-            echo "🌑 Triggering Midnight Reminder..."
-            curl -s -X GET "https://cne-athkar-bot.vercel.app/api/cron/midnight"
-          else
-            echo "ℹ️ No specific reminder for hour $HOUR. Running general check..."
-            # Optional: curl -s -X GET "https://cne-athkar-bot.vercel.app/api/cron/dispatch"
-          fi
+          echo "🚀 Triggering Central Dispatcher..."
+          curl -s -X GET "https://cne-athkar-bot.vercel.app/api/cron/dispatch"
