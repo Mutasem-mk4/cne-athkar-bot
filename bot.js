@@ -384,7 +384,8 @@ bot.onText(/\/prayers/, async (msg) => {
     const timings = await getAmmanPrayerTimes();
     bot.sendMessage(msg.chat.id, formatPrayerTimesMessage(timings));
   } catch (err) {
-    bot.sendMessage(msg.chat.id, "⚠️ عذراً، لم أتمكن من جلب مواقيت الصلاة حالياً.");
+    console.error('Prayers Command Error:', err.message);
+    bot.sendMessage(msg.chat.id, "⚠️ عذراً، هنالك مشكلة في الاتصال بمزود مواقيت الصلاة. يرجى المحاولة لاحقاً.");
   }
 });
 
