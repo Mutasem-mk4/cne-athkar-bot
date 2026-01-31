@@ -14,28 +14,10 @@ module.exports = async (req, res) => {
 
         console.log(`⏰ Cron triggered at ${hour}:${minute} UTC`);
 
-        // 03:00 UTC -> 6:00 Amman (Fajr)
-        if (hour === 3) {
-            console.log('🕌 Dispatching Fajr Reminder...');
-            await sendFajrReminder();
-        }
-        // 05:00 UTC -> 8:00 Amman (Morning)
-        else if (hour === 5) {
-            console.log('🌅 Dispatching Morning Athkar...');
-            await sendMorningMessage();
-        }
-        // 15:00 UTC -> 18:00 Amman (Evening)
-        else if (hour === 15) {
-            console.log('🌙 Dispatching Evening Athkar...');
-            await sendEveningMessage(undefined, false);
-        }
-        // 21:00 UTC -> 00:00 Amman (Midnight)
-        else if (hour === 21) {
-            console.log('🌑 Dispatching Midnight Reminder...');
-            await sendMidnightReminder();
-        } else {
-            console.log('ℹ️ No task scheduled for this hour.');
-        }
+        // Dispatcher is now retired in favor of specific endpoints.
+        console.log('ℹ️ Dispatcher reached - ignoring automated task to prevent duplicates.');
+        // No action taken here. 
+
 
         if (pendingPromises && pendingPromises.length > 0) {
             await Promise.all(pendingPromises);
