@@ -22,6 +22,7 @@ const {
 } = require('./data/content');
 
 const { getAmmanPrayerTimes } = require('./lib/prayer');
+const { generateAthkarImage } = require('./lib/imageGenerator');
 
 // ==========================================
 // 📌 الإعدادات
@@ -432,15 +433,21 @@ bot.on('callback_query', async (callbackQuery) => {
       case 'thikr':
         const allAthkar = [...morningAthkar, ...eveningAthkar];
         const thikr = getRandomItem(allAthkar);
-        bot.sendMessage(chatId, `📿 ذكر\n\n${thikr.text}\n\n📖 ${thikr.count}`);
+        bot.sendMessage(chatId, `📿 ذكر\n\n${thikr.text}\n\n📖 ${thikr.count}`, {
+          reply_markup: { inline_keyboard: [[{ text: '📷 تحويل لصورة', callback_data: 'gen_image' }]] }
+        });
         break;
       case 'hadith':
         const h = getRandomItem(hadiths);
-        bot.sendMessage(chatId, `🕌 حديث شريف\n\n${h.hadith}\n\n📍 ${h.narrator}\n\n💡 الشرح: ${h.explanation}`);
+        bot.sendMessage(chatId, `🕌 حديث شريف\n\n${h.hadith}\n\n📍 ${h.narrator}\n\n💡 الشرح: ${h.explanation}`, {
+          reply_markup: { inline_keyboard: [[{ text: '📷 تحويل لصورة', callback_data: 'gen_image' }]] }
+        });
         break;
       case 'verse':
         const v = getRandomItem(verses);
-        bot.sendMessage(chatId, `🕋 آية وتفسير\n\n${v.verse}\n\n📍 ${v.surah}\n\n📒 التفسير: ${v.tafsir}`);
+        bot.sendMessage(chatId, `🕋 آية وتفسير\n\n${v.verse}\n\n📍 ${v.surah}\n\n📒 التفسير: ${v.tafsir}`, {
+          reply_markup: { inline_keyboard: [[{ text: '📷 تحويل لصورة', callback_data: 'gen_image' }]] }
+        });
         break;
       case 'dua':
         bot.sendMessage(chatId, `🤲 دعاء\n\n${getRandomItem(duas)}`);
@@ -457,7 +464,17 @@ bot.on('callback_query', async (callbackQuery) => {
         break;
       case 'quote':
         const q = getRandomItem(quotes);
-        bot.sendMessage(chatId, `💡 خاطرة\n\n"${q.quote}"\n\n✒️ ${q.author}`);
+        bot.sendMessage(chatId, `💡 خاطرة\n\n"${q.quote}"\n\n✒️ ${q.author}`, {
+          reply_markup: { inline_keyboard: [[{ text: '📷 تحويل لصورة', callback_data: 'gen_image' }]] }
+        });
+        break;
+      case 'gen_image':
+        bot.sendMessage(chatId, '⏳ جاري تصميم الصورة...');
+        const caption = msg.text || '';
+        // تنظيف النص من العناوين الإضافية
+        const cleanText = caption.split('\n\n').slice(1, -1).join('\n\n') || caption;
+        const imageBuffer = await generateAthkarImage(cleanText);
+        bot.sendPhoto(chatId, imageBuffer, { caption: '✨ تم التصميم بواسطة بوت أذكار CNE' });
         break;
     }
   } catch (error) {
@@ -487,19 +504,25 @@ bot.onText(/\/thikr/, (msg) => {
   logCommand(msg.chat.id, 'thikr');
   const allAthkar = [...morningAthkar, ...eveningAthkar];
   const thikr = getRandomItem(allAthkar);
-  bot.sendMessage(msg.chat.id, `📿 ذكر\n\n${thikr.text}\n\n📖 ${thikr.count}`);
+  bot.sendMessage(msg.chat.id, `📿 ذكر\n\n${thikr.text}\n\n📖 ${thikr.count}`, {
+    reply_markup: { inline_keyboard: [[{ text: '📷 تحويل لصورة', callback_data: 'gen_image' }]] }
+  });
 });
 
 bot.onText(/\/hadith/, (msg) => {
   logCommand(msg.chat.id, 'hadith');
   const hadith = getRandomItem(hadiths);
-  bot.sendMessage(msg.chat.id, `🕌 حديث شريف\n\n${hadith.hadith}\n\n📍 ${hadith.narrator}\n\n💡 الشرح: ${hadith.explanation}`);
+  bot.sendMessage(msg.chat.id, `🕌 حديث شريف\n\n${hadith.hadith}\n\n📍 ${hadith.narrator}\n\n💡 الشرح: ${hadith.explanation}`, {
+    reply_markup: { inline_keyboard: [[{ text: '📷 تحويل لصورة', callback_data: 'gen_image' }]] }
+  });
 });
 
 bot.onText(/\/verse/, (msg) => {
   logCommand(msg.chat.id, 'verse');
   const verse = getRandomItem(verses);
-  bot.sendMessage(msg.chat.id, `🕋 آية وتفسير\n\n${verse.verse}\n\n📍 ${verse.surah}\n\n📒 التفسير: ${verse.tafsir}`);
+  bot.sendMessage(msg.chat.id, `🕋 آية وتفسير\n\n${verse.verse}\n\n📍 ${verse.surah}\n\n📒 التفسير: ${verse.tafsir}`, {
+    reply_markup: { inline_keyboard: [[{ text: '📷 تحويل لصورة', callback_data: 'gen_image' }]] }
+  });
 });
 
 bot.onText(/\/dua/, (msg) => {
@@ -511,7 +534,9 @@ bot.onText(/\/dua/, (msg) => {
 bot.onText(/\/quote/, (msg) => {
   logCommand(msg.chat.id, 'quote');
   const quote = getRandomItem(quotes);
-  bot.sendMessage(msg.chat.id, `💡 خاطرة\n\n"${quote.quote}"\n\n✒️ ${quote.author}`);
+  bot.sendMessage(msg.chat.id, `💡 خاطرة\n\n"${quote.quote}"\n\n✒️ ${quote.author}`, {
+    reply_markup: { inline_keyboard: [[{ text: '📷 تحويل لصورة', callback_data: 'gen_image' }]] }
+  });
 });
 
 // نظام البث الإداري
