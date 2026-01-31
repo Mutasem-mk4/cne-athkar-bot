@@ -72,14 +72,32 @@ function track(promise) {
 // 🛠️ دوال مساعدة
 // ==========================================
 
-const logCommand = async (chatId, command) => {
-  try {
-    await connectDB();
-    const log = new CommandLog({ chat_id: chatId.toString(), command });
-    await log.save();
-  } catch (e) {
-    console.error(`❌ Error logging command ${command}:`, e.message);
-  }
+let connPromise = null;
+const connectDB = async () => {
+  if (connPromise) return connPromise;
+  connPromise = mongoose.connect(process.env.MONGODB_URI).then(() => {
+    console.log('✅ MongoDB Connected');
+    return true;
+  }).catch(err => {
+    connPromise = null;
+    console.error('❌ MongoDB Connection Error:', err.message);
+    throw err;
+  });
+  return connPromise;
+};
+
+const logCommand = (chatId, command) => {
+  if (!chatId || !command) return;
+  const promise = (async () => {
+    try {
+      await connectDB();
+      const log = new CommandLog({ chat_id: chatId.toString(), command });
+      await log.save();
+    } catch (e) {
+      console.error(`❌ Error logging ${command}:`, e.message);
+    }
+  })();
+  track(promise);
 };
 
 async function registerGroup(chatId, title) {
@@ -424,11 +442,10 @@ bot.on('callback_query', async (callbackQuery) => {
   const msg = callbackQuery.message;
   const chatId = msg.chat.id;
 
-  // إخفاء "جاري التحميل" في تليجرام
-  bot.answerCallbackQuery(callbackQuery.id);
-  logCommand(chatId, `btn_${action}`);
-
   try {
+    bot.answerCallbackQuery(callbackQuery.id).catch(() => { });
+    logCommand(chatId, `btn_${action}`);
+
     switch (action) {
       case 'thikr':
         const allAthkar = [...morningAthkar, ...eveningAthkar];
@@ -469,11 +486,10 @@ bot.on('callback_query', async (callbackQuery) => {
         });
         break;
       case 'gen_image':
+        if (!msg.text) return bot.sendMessage(chatId, '⚠️ لا يمكن تحويل هذه الرسالة لصورة.');
         bot.sendMessage(chatId, '⏳ جاري تصميم الصورة...');
-        const caption = msg.text || '';
-        // تنظيف النص من العناوين الإضافية
-        const cleanText = caption.split('\n\n').slice(1, -1).join('\n\n') || caption;
-        const imageBuffer = await generateAthkarImage(cleanText);
+        const cleanText = msg.text.includes('\n\n') ? msg.text.split('\n\n').slice(1, -1).join('\n\n') : msg.text;
+        const imageBuffer = await generateAthkarImage(cleanText || msg.text);
         bot.sendPhoto(chatId, imageBuffer, { caption: '✨ تم التصميم بواسطة بوت أذكار CNE' });
         break;
     }
