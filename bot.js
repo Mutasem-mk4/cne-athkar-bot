@@ -360,24 +360,83 @@ if (isLocal) {
 // 💬 الأوامر
 // ==========================================
 
+const getMainMenu = () => {
+  return {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '📿 ذكر عشوائي', callback_data: 'thikr' }, { text: '🕌 حديث شريف', callback_data: 'hadith' }],
+        [{ text: '🕋 آية وتفسير', callback_data: 'verse' }, { text: '🤲 دعاء', callback_data: 'dua' }],
+        [{ text: '🌅 أذكار الصباح', callback_data: 'morning' }, { text: '🌙 أذكار المساء', callback_data: 'evening' }],
+        [{ text: '⏰ مواقيت الصلاة', callback_data: 'prayers' }, { text: '💡 خاطرة', callback_data: 'quote' }]
+      ]
+    },
+    parse_mode: 'Markdown'
+  };
+};
+
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   const welcomeMessage = `
 🌟 *أهلاً بك في بوت CNE Athkar*
 📿 بوت أذكار قروب الجامعة
 
-*الأوامر المتاحة:*
-/thikr - ذكر عشوائي
-/hadith - حديث عشوائي
-/verse - آية عشوائية
-/dua - دعاء عشوائي
-/morning - أذكار الصباح
-/evening - أذكار المساء
-/prayers - مواقيت الصلاة
-/help - المساعدة
+يمكنك استخدام القائمة أدناه للوصول السريع للأذكار والمحتوى الإسلامي:
   `;
-  bot.sendMessage(chatId, welcomeMessage);
+  bot.sendMessage(chatId, welcomeMessage, getMainMenu());
 });
+
+bot.onText(/\/menu/, (msg) => {
+  bot.sendMessage(msg.chat.id, '📋 *القائمة الرئيسية*', getMainMenu());
+});
+
+// التعامل مع الضغط على الأزرار
+bot.on('callback_query', async (callbackQuery) => {
+  const action = callbackQuery.data;
+  const msg = callbackQuery.message;
+  const chatId = msg.chat.id;
+
+  // إخفاء "جاري التحميل" في تليجرام
+  bot.answerCallbackQuery(callbackQuery.id);
+
+  try {
+    switch (action) {
+      case 'thikr':
+        const allAthkar = [...morningAthkar, ...eveningAthkar];
+        const thikr = getRandomItem(allAthkar);
+        bot.sendMessage(chatId, `📿 ذكر\n\n${thikr.text}\n\n📖 ${thikr.count}`);
+        break;
+      case 'hadith':
+        const h = getRandomItem(hadiths);
+        bot.sendMessage(chatId, `🕌 حديث شريف\n\n${h.hadith}\n\n📍 ${h.narrator}\n\n💡 الشرح: ${h.explanation}`);
+        break;
+      case 'verse':
+        const v = getRandomItem(verses);
+        bot.sendMessage(chatId, `🕋 آية وتفسير\n\n${v.verse}\n\n📍 ${v.surah}\n\n📒 التفسير: ${v.tafsir}`);
+        break;
+      case 'dua':
+        bot.sendMessage(chatId, `🤲 دعاء\n\n${getRandomItem(duas)}`);
+        break;
+      case 'morning':
+        bot.sendMessage(chatId, formatMorningAthkar());
+        break;
+      case 'evening':
+        bot.sendMessage(chatId, formatEveningAthkar());
+        break;
+      case 'prayers':
+        const timings = await getAmmanPrayerTimes();
+        bot.sendMessage(chatId, formatPrayerTimesMessage(timings));
+        break;
+      case 'quote':
+        const q = getRandomItem(quotes);
+        bot.sendMessage(chatId, `💡 خاطرة\n\n"${q.quote}"\n\n✒️ ${q.author}`);
+        break;
+    }
+  } catch (error) {
+    console.error('Callback Error:', error.message);
+    bot.sendMessage(chatId, '⚠️ عذراً، حدث خطأ أثناء تنفيذ الأمر.');
+  }
+});
+
 
 bot.onText(/\/prayers/, async (msg) => {
   try {
