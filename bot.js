@@ -16,7 +16,8 @@ const {
   quotes,
   duas,
   videos,
-  fajrReminders
+  fajrReminders,
+  fridayReminders
 } = require('./data/content');
 
 const { getAmmanPrayerTimes } = require('./lib/prayer');
@@ -310,6 +311,22 @@ const sendMidnightReminder = async (targetChatId) => {
   }
 };
 
+const sendFridayReminder = async (targetChatId, type = 'salawat') => {
+  const content = fridayReminders[type];
+  if (!content) return;
+
+  const chatIds = targetChatId ? [targetChatId] : await getAllGroups();
+  console.log(`📅 Sending Friday ${type} reminder to:`, chatIds.length, 'groups');
+
+  for (const id of chatIds) {
+    try {
+      await bot.sendMessage(id, content);
+    } catch (error) {
+      console.error(`❌ Error sending Friday ${type} to ${id}:`, error.message);
+    }
+  }
+};
+
 async function performSendEvening(targetChatId, includeVideo) {
   try {
     // 1. Try to Send Video from MongoDB (Optional)
@@ -541,6 +558,15 @@ bot.onText(/\/broadcast$/, async (msg) => {
   bot.sendMessage(chatId, `✅ اكتمل التوجيه:\n- تم بنجاح: ${success}\n- فشل: ${fail}`);
 });
 
+bot.onText(/\/friday_test/, async (msg) => {
+  const userId = msg.from.id;
+  if (ADMIN_ID && userId.toString() !== ADMIN_ID.toString()) return;
+
+  await sendFridayReminder(msg.chat.id, 'salawat');
+  await sendFridayReminder(msg.chat.id, 'kahf');
+  await sendFridayReminder(msg.chat.id, 'hourOfResponse');
+});
+
 bot.onText(/\/morning/, (msg) => {
   bot.sendMessage(msg.chat.id, formatMorningAthkar());
 });
@@ -646,6 +672,7 @@ module.exports = {
   sendMorningMessage,
   sendEveningMessage,
   sendMidnightReminder,
+  sendFridayReminder,
   Video,
   pendingPromises
 };
