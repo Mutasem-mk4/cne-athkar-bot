@@ -16,10 +16,6 @@
         {
             "path": "/api/cron/midnight",
             "schedule": "0 21 * * *"
-        },
-        {
-            "path": "/api/cron/friday",
-            "schedule": "0 * * * 5"
         }
     ]
 }

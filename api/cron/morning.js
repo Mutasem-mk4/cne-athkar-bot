@@ -5,6 +5,14 @@ module.exports = async (req, res) => {
         console.log('Running Morning Cron...');
         await sendMorningMessage();
 
+        // تذكيرات يوم الجمعة
+        const day = new Date().getUTCDay(); // 5 = Friday
+        if (day === 5) {
+            console.log('Today is Friday! Sending Salawat and Kahf reminders...');
+            await sendFridayReminder(undefined, 'salawat');
+            await sendFridayReminder(undefined, 'kahf');
+        }
+
         if (pendingPromises && pendingPromises.length > 0) {
             await Promise.all(pendingPromises);
         }
