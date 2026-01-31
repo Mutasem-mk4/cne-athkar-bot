@@ -8,6 +8,7 @@ const cron = require('node-cron');
 const connectDB = require('./lib/db');
 const Video = require('./models/Video');
 const Group = require('./models/Group');
+const CommandLog = require('./models/CommandLog');
 const {
   morningAthkar,
   eveningAthkar,
@@ -70,14 +71,23 @@ function track(promise) {
 // 🛠️ دوال مساعدة
 // ==========================================
 
-// تسجيل الجروب في قاعدة البيانات
+const logCommand = async (chatId, command) => {
+  try {
+    await connectDB();
+    const log = new CommandLog({ chat_id: chatId.toString(), command });
+    await log.save();
+  } catch (e) {
+    console.error(`❌ Error logging command ${command}:`, e.message);
+  }
+};
+
 async function registerGroup(chatId, title) {
   if (!chatId || (typeof chatId === 'string' && chatId.startsWith('-100') === false && chatId.startsWith('-') === false)) return;
   try {
     await connectDB();
     await Group.findOneAndUpdate(
       { chat_id: chatId.toString() },
-      { title: title || 'Group' },
+      { title: title || 'Group', last_message_at: Date.now() },
       { upsert: true }
     );
   } catch (error) {
@@ -415,6 +425,7 @@ bot.on('callback_query', async (callbackQuery) => {
 
   // إخفاء "جاري التحميل" في تليجرام
   bot.answerCallbackQuery(callbackQuery.id);
+  logCommand(chatId, `btn_${action}`);
 
   try {
     switch (action) {
@@ -467,32 +478,38 @@ bot.onText(/\/prayers/, async (msg) => {
 });
 
 bot.onText(/\/help/, (msg) => {
+  logCommand(msg.chat.id, 'help');
   const helpMessage = `📚 *دليل استخدام البوت*\n\n/thikr - ذكر\n/morning - أذكار الصباح\n/evening - أذكار المساء\n...`;
   bot.sendMessage(msg.chat.id, helpMessage);
 });
 
 bot.onText(/\/thikr/, (msg) => {
+  logCommand(msg.chat.id, 'thikr');
   const allAthkar = [...morningAthkar, ...eveningAthkar];
   const thikr = getRandomItem(allAthkar);
   bot.sendMessage(msg.chat.id, `📿 ذكر\n\n${thikr.text}\n\n📖 ${thikr.count}`);
 });
 
 bot.onText(/\/hadith/, (msg) => {
+  logCommand(msg.chat.id, 'hadith');
   const hadith = getRandomItem(hadiths);
   bot.sendMessage(msg.chat.id, `🕌 حديث شريف\n\n${hadith.hadith}\n\n📍 ${hadith.narrator}\n\n💡 الشرح: ${hadith.explanation}`);
 });
 
 bot.onText(/\/verse/, (msg) => {
+  logCommand(msg.chat.id, 'verse');
   const verse = getRandomItem(verses);
   bot.sendMessage(msg.chat.id, `🕋 آية وتفسير\n\n${verse.verse}\n\n📍 ${verse.surah}\n\n📒 التفسير: ${verse.tafsir}`);
 });
 
 bot.onText(/\/dua/, (msg) => {
+  logCommand(msg.chat.id, 'dua');
   const dua = getRandomItem(duas);
   bot.sendMessage(msg.chat.id, `🤲 دعاء\n\n${dua}`);
 });
 
 bot.onText(/\/quote/, (msg) => {
+  logCommand(msg.chat.id, 'quote');
   const quote = getRandomItem(quotes);
   bot.sendMessage(msg.chat.id, `💡 خاطرة\n\n"${quote.quote}"\n\n✒️ ${quote.author}`);
 });
@@ -567,7 +584,55 @@ bot.onText(/\/friday_test/, async (msg) => {
   await sendFridayReminder(msg.chat.id, 'hourOfResponse');
 });
 
+bot.onText(/\/stats/, async (msg) => {
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+
+  if (ADMIN_ID && userId.toString() !== ADMIN_ID.toString()) {
+    return bot.sendMessage(chatId, '⚠️ عذراً، هذا الأمر متاح للمسؤول فقط.');
+  }
+
+  try {
+    await connectDB();
+    const totalGroups = await Group.countDocuments();
+    const totalVideos = await Video.countDocuments();
+    const totalCommands = await CommandLog.countDocuments();
+
+    // نمو الـ 24 ساعة الماضية
+    const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const newGroups24h = await Group.countDocuments({ added_at: { $gte: last24h } });
+
+    // الأوامر الأكثر استخداماً
+    const topCommands = await CommandLog.aggregate([
+      { $group: { _id: "$command", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 3 }
+    ]);
+
+    let statsMsg = `📊 *إحصائيات البوت المتقدمة*\n`;
+    statsMsg += `━━━━━━━━━━━━━━━━\n`;
+    statsMsg += `👥 إجمالي الجروبات: ${totalGroups}\n`;
+    statsMsg += `🎥 إجمالي الفيديوهات: ${totalVideos}\n`;
+    statsMsg += `⌨️ إجمالي الأوامر المنفذة: ${totalCommands}\n`;
+    statsMsg += `📈 نمو (آخر 24 ساعة): +${newGroups24h}\n\n`;
+
+    statsMsg += `🔝 *الأوامر الأكثر استخداماً:*\n`;
+    topCommands.forEach((cmd, i) => {
+      statsMsg += `${i + 1}. /${cmd._id} (${cmd.count} مرة)\n`;
+    });
+
+    statsMsg += `━━━━━━━━━━━━━━━━\n`;
+    statsMsg += `⚙️ Node.js: ${process.version}\n`;
+    statsMsg += `🚀 العمليات النشطة: ${pendingPromises.length}`;
+
+    bot.sendMessage(chatId, statsMsg, { parse_mode: 'Markdown' });
+  } catch (e) {
+    bot.sendMessage(chatId, `❌ خطأ في جلب الإحصائيات: ${e.message}`);
+  }
+});
+
 bot.onText(/\/morning/, (msg) => {
+  logCommand(msg.chat.id, 'morning');
   bot.sendMessage(msg.chat.id, formatMorningAthkar());
 });
 
