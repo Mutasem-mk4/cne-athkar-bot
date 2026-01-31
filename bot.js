@@ -584,6 +584,9 @@ bot.onText(/\/friday_test/, async (msg) => {
   await sendFridayReminder(msg.chat.id, 'hourOfResponse');
 });
 
+// ذاكرة مؤقتة للإحصائيات لتجنب التعليق
+let statsCache = { data: null, expire: 0 };
+
 bot.onText(/\/stats/, async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
@@ -592,21 +595,27 @@ bot.onText(/\/stats/, async (msg) => {
     return bot.sendMessage(chatId, '⚠️ عذراً، هذا الأمر متاح للمسؤول فقط.');
   }
 
+  // استخدام الكاش إذا كان متاحاً (لمدة دقيقة)
+  if (statsCache.data && Date.now() < statsCache.expire) {
+    return bot.sendMessage(chatId, statsCache.data + "\n\n⏱️ (من الذاكرة المؤقتة)", { parse_mode: 'Markdown' });
+  }
+
   try {
     await connectDB();
-    const totalGroups = await Group.countDocuments();
-    const totalVideos = await Video.countDocuments();
-    const totalCommands = await CommandLog.countDocuments();
 
-    // نمو الـ 24 ساعة الماضية
+    // تشغيل الاستعلامات بالتوازي لتسريع الاستجابة
     const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const newGroups24h = await Group.countDocuments({ added_at: { $gte: last24h } });
 
-    // الأوامر الأكثر استخداماً
-    const topCommands = await CommandLog.aggregate([
-      { $group: { _id: "$command", count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 3 }
+    const [totalGroups, totalVideos, totalCommands, newGroups24h, topCommands] = await Promise.all([
+      Group.countDocuments(),
+      Video.countDocuments(),
+      CommandLog.countDocuments(),
+      Group.countDocuments({ added_at: { $gte: last24h } }),
+      CommandLog.aggregate([
+        { $group: { _id: "$command", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 3 }
+      ])
     ]);
 
     let statsMsg = `📊 *إحصائيات البوت المتقدمة*\n`;
@@ -625,8 +634,15 @@ bot.onText(/\/stats/, async (msg) => {
     statsMsg += `⚙️ Node.js: ${process.version}\n`;
     statsMsg += `🚀 العمليات النشطة: ${pendingPromises.length}`;
 
+    // تحديث الكاش
+    statsCache = {
+      data: statsMsg,
+      expire: Date.now() + 60 * 1000 // دقيقة واحدة
+    };
+
     bot.sendMessage(chatId, statsMsg, { parse_mode: 'Markdown' });
   } catch (e) {
+    console.error('Stats Error:', e);
     bot.sendMessage(chatId, `❌ خطأ في جلب الإحصائيات: ${e.message}`);
   }
 });
