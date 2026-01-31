@@ -28,6 +28,7 @@ const { getAmmanPrayerTimes } = require('./lib/prayer');
 const BOT_TOKEN = (process.env.BOT_TOKEN || '').trim();
 const GROUP_CHAT_ID = process.env.GROUP_CHAT_ID;
 const TIMEZONE = process.env.TIMEZONE || 'Asia/Amman';
+const ADMIN_ID = process.env.ADMIN_ID; // معرف المسؤول للبث
 
 if (!BOT_TOKEN) {
   console.error('❌ خطأ: لم يتم تعيين BOT_TOKEN في ملف .env');
@@ -477,6 +478,67 @@ bot.onText(/\/dua/, (msg) => {
 bot.onText(/\/quote/, (msg) => {
   const quote = getRandomItem(quotes);
   bot.sendMessage(msg.chat.id, `💡 خاطرة\n\n"${quote.quote}"\n\n✒️ ${quote.author}`);
+});
+
+// نظام البث الإداري
+bot.onText(/\/broadcast (.+)/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+
+  if (ADMIN_ID && userId.toString() !== ADMIN_ID.toString()) {
+    return bot.sendMessage(chatId, '⚠️ عذراً، هذا الأمر متاح للمسؤول فقط.');
+  }
+
+  const broadcastMsg = match[1];
+  const chatIds = await getAllGroups();
+
+  bot.sendMessage(chatId, `🚀 بدأت عملية البث إلى ${chatIds.length} وجهة...`);
+
+  let success = 0;
+  let fail = 0;
+
+  for (const id of chatIds) {
+    try {
+      await bot.sendMessage(id, broadcastMsg);
+      success++;
+    } catch (e) {
+      console.error(`Broadcast failed for ${id}:`, e.message);
+      fail++;
+    }
+  }
+
+  bot.sendMessage(chatId, `✅ اكتمل البث:\n- تم بنجاح: ${success}\n- فشل: ${fail}`);
+});
+
+// البث عبر الرد (Reply)
+bot.onText(/\/broadcast$/, async (msg) => {
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+
+  if (ADMIN_ID && userId.toString() !== ADMIN_ID.toString()) {
+    return bot.sendMessage(chatId, '⚠️ عذراً، هذا الأمر متاح للمسؤول فقط.');
+  }
+
+  if (!msg.reply_to_message) {
+    return bot.sendMessage(chatId, 'ℹ️ يرجى الرد على الرسالة التي تريد بثها بكلمة `/broadcast` أو كتابة `/broadcast النص`.');
+  }
+
+  const chatIds = await getAllGroups();
+  bot.sendMessage(chatId, `🚀 جاري إعادة توجيه الرسالة إلى ${chatIds.length} وجهة...`);
+
+  let success = 0;
+  let fail = 0;
+
+  for (const id of chatIds) {
+    try {
+      await bot.copyMessage(id, msg.chat.id, msg.reply_to_message.message_id);
+      success++;
+    } catch (e) {
+      fail++;
+    }
+  }
+
+  bot.sendMessage(chatId, `✅ اكتمل التوجيه:\n- تم بنجاح: ${success}\n- فشل: ${fail}`);
 });
 
 bot.onText(/\/morning/, (msg) => {
