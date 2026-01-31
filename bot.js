@@ -494,8 +494,9 @@ bot.on('callback_query', async (callbackQuery) => {
         break;
     }
   } catch (error) {
-    console.error('Callback Error:', error.message);
-    bot.sendMessage(chatId, '⚠️ عذراً، حدث خطأ أثناء تنفيذ الأمر.');
+    console.error('Callback Error:', error);
+    const errorMessage = `⚠️ عذراً، حدث خطأ: ${error.message}`;
+    bot.sendMessage(chatId, errorMessage);
   }
 });
 
@@ -733,6 +734,17 @@ bot.onText(/\/test_midnight/, async (msg) => {
   const promise = sendMidnightReminder(msg.chat.id)
     .catch(err => bot.sendMessage(msg.chat.id, `❌ Error messages: ${err.message}`));
   track(promise);
+});
+
+bot.onText(/\/test_canvas/, async (msg) => {
+  const chatId = msg.chat.id;
+  try {
+    bot.sendMessage(chatId, '🧪 Testing Canvas...');
+    const buffer = await generateAthkarImage("بسم الله الرحمن الرحيم", "تجربة");
+    bot.sendPhoto(chatId, buffer, { caption: '✅ Canvas test successful!' });
+  } catch (err) {
+    bot.sendMessage(chatId, `❌ Canvas Test Failed: ${err.message}\n\nStack: ${err.stack}`);
+  }
 });
 
 bot.onText(/\/status/, (msg) => {
