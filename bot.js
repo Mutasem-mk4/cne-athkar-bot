@@ -19,6 +19,8 @@ const {
   fajrReminders
 } = require('./data/content');
 
+const { getAmmanPrayerTimes } = require('./lib/prayer');
+
 // ==========================================
 // 📌 الإعدادات
 // ==========================================
@@ -185,12 +187,33 @@ function formatMidnightContent() {
 // 📤 دوال النشر (Exported for Cron/API)
 // ==========================================
 
+const formatPrayerTimesMessage = (timings) => {
+  return `🕋 مواقيت الصلاة اليوم (عمان)\n` +
+    `━━━━━━━━━━━━━━━━\n` +
+    ` Fajr:     ${timings.Fajr}\n` +
+    ` Sunrise:  ${timings.Sunrise}\n` +
+    ` Dhuhr:    ${timings.Dhuhr}\n` +
+    ` Asr:      ${timings.Asr}\n` +
+    ` Maghrib:  ${timings.Maghrib}\n` +
+    ` Isha:     ${timings.Isha}\n` +
+    `━━━━━━━━━━━━━━━━`;
+};
+
 const sendFajrReminder = async (targetChatId) => {
+  let extraContent = '';
+  try {
+    const timings = await getAmmanPrayerTimes();
+    extraContent = `\n\n${formatPrayerTimesMessage(timings)}`;
+  } catch (err) {
+    console.error('Error fetching prayer times for reminder:', err.message);
+  }
+
+  const randomMsg = getRandomItem(fajrReminders);
+  const message = `🕌 صلاة الفجر\n\n${randomMsg}${extraContent}\n\nتقبل الله طاعاتكم 🤲`;
+
   if (targetChatId) {
     console.log('🕌 Sending single FajrReminder to:', targetChatId);
     try {
-      const randomMsg = getRandomItem(fajrReminders);
-      const message = `🕌 صلاة الفجر\n\n${randomMsg}\n\nتقبل الله طاعاتكم 🤲`;
       await bot.sendMessage(targetChatId, message);
     } catch (e) {
       console.error('❌ Error sending single Fajr:', e.message);
@@ -203,8 +226,6 @@ const sendFajrReminder = async (targetChatId) => {
 
   for (const id of chatIds) {
     try {
-      const randomMsg = getRandomItem(fajrReminders);
-      const message = `🕌 صلاة الفجر\n\n${randomMsg}\n\nتقبل الله طاعاتكم 🤲`;
       await bot.sendMessage(id, message);
       console.log(`✅ Fajr sent to group: ${id}`);
     } catch (error) {
@@ -352,9 +373,19 @@ bot.onText(/\/start/, (msg) => {
 /dua - دعاء عشوائي
 /morning - أذكار الصباح
 /evening - أذكار المساء
+/prayers - مواقيت الصلاة
 /help - المساعدة
   `;
   bot.sendMessage(chatId, welcomeMessage);
+});
+
+bot.onText(/\/prayers/, async (msg) => {
+  try {
+    const timings = await getAmmanPrayerTimes();
+    bot.sendMessage(msg.chat.id, formatPrayerTimesMessage(timings));
+  } catch (err) {
+    bot.sendMessage(msg.chat.id, "⚠️ عذراً، لم أتمكن من جلب مواقيت الصلاة حالياً.");
+  }
 });
 
 bot.onText(/\/help/, (msg) => {
