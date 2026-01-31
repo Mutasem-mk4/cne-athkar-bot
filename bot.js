@@ -385,7 +385,7 @@ bot.onText(/\/prayers/, async (msg) => {
     bot.sendMessage(msg.chat.id, formatPrayerTimesMessage(timings));
   } catch (err) {
     console.error('Prayers Command Error:', err.message);
-    bot.sendMessage(msg.chat.id, "⚠️ عذراً، هنالك مشكلة في الاتصال بمزود مواقيت الصلاة. يرجى المحاولة لاحقاً.");
+    bot.sendMessage(msg.chat.id, `⚠️ عذراً، هنالك مشكلة: ${err.message}`);
   }
 });
 
