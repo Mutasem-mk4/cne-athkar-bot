@@ -22,7 +22,9 @@ const {
 } = require('./data/content');
 
 const { getAmmanPrayerTimes } = require('./lib/prayer');
-const { generateAthkarImage } = require('./lib/imageGenerator');
+// TEMPORARILY DISABLED - canvas library crashes on Vercel
+// const { generateAthkarImage } = require('./lib/imageGenerator');
+const generateAthkarImage = null;
 
 // ==========================================
 // 📌 الإعدادات
@@ -486,11 +488,7 @@ bot.on('callback_query', async (callbackQuery) => {
         });
         break;
       case 'gen_image':
-        if (!msg.text) return bot.sendMessage(chatId, '⚠️ لا يمكن تحويل هذه الرسالة لصورة.');
-        bot.sendMessage(chatId, '⏳ جاري تصميم الصورة...');
-        const cleanText = msg.text.includes('\n\n') ? msg.text.split('\n\n').slice(1, -1).join('\n\n') : msg.text;
-        const imageBuffer = await generateAthkarImage(cleanText || msg.text);
-        bot.sendPhoto(chatId, imageBuffer, { caption: '✨ تم التصميم بواسطة بوت أذكار CNE' });
+        bot.sendMessage(chatId, '⚠️ ميزة تحويل الصور معطلة مؤقتاً. سيتم تفعيلها قريباً إن شاء الله.');
         break;
     }
   } catch (error) {
