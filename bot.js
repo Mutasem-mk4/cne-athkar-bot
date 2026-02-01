@@ -73,20 +73,7 @@ function track(promise) {
 // ==========================================
 // 🛠️ دوال مساعدة
 // ==========================================
-
-let connPromise = null;
-const connectDB = async () => {
-  if (connPromise) return connPromise;
-  connPromise = mongoose.connect(process.env.MONGODB_URI).then(() => {
-    console.log('✅ MongoDB Connected');
-    return true;
-  }).catch(err => {
-    connPromise = null;
-    console.error('❌ MongoDB Connection Error:', err.message);
-    throw err;
-  });
-  return connPromise;
-};
+// Note: connectDB is imported from ./lib/db at top of file
 
 const logCommand = (chatId, command) => {
   if (!chatId || !command) return;
