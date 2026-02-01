@@ -8,9 +8,6 @@
     "dev": "node bot.js"
   },
   "dependencies": {
-    "@napi-rs/canvas": "^0.1.89",
-    "arabic-reshaper": "^1.1.0",
-    "bidi-js": "^1.0.3",
     "dotenv": "^16.4.5",
     "mongoose": "^9.1.5",
     "node-cron": "^3.0.3",
