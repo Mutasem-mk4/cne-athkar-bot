@@ -1,6 +1,13 @@
 const { sendMorningMessage, sendFridayReminder, pendingPromises } = require('../../bot');
 
+const CRON_SECRET = process.env.CRON_SECRET;
+
 module.exports = async (req, res) => {
+    // حماية من الاستدعاء الخارجي
+    if (CRON_SECRET && req.headers['x-cron-secret'] !== CRON_SECRET) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     try {
         console.log('Running Morning Cron...');
         await sendMorningMessage();
@@ -17,7 +24,7 @@ module.exports = async (req, res) => {
             await Promise.all(pendingPromises);
         }
 
-        res.status(200).json({ status: 'success' });
+        res.status(200).json({ status: 'success', task: 'morning' });
     } catch (error) {
         console.error('Morning Cron Error:', error);
         res.status(500).json({ error: error.message });

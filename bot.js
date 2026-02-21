@@ -92,7 +92,7 @@ async function registerGroup(chatId, title) {
     await connectDB();
     await Group.findOneAndUpdate(
       { chat_id: chatId.toString() },
-      { title: title || 'Group', last_message_at: Date.now() },
+      { title: title || 'Group', last_message_at: Date.now(), active: true, fail_count: 0 },
       { upsert: true }
     );
   } catch (error) {
@@ -103,13 +103,51 @@ async function registerGroup(chatId, title) {
 async function getAllGroups() {
   try {
     await connectDB();
-    const dbGroups = await Group.find();
+    // نجلب المجموعات النشطة فقط (active: true)
+    const dbGroups = await Group.find({ active: { $ne: false } });
     const chatIds = new Set(dbGroups.map(g => g.chat_id));
     if (GROUP_CHAT_ID) chatIds.add(GROUP_CHAT_ID.toString());
     return Array.from(chatIds);
   } catch (error) {
     console.error('❌ Error fetching groups:', error.message);
     return GROUP_CHAT_ID ? [GROUP_CHAT_ID.toString()] : [];
+  }
+}
+
+// تسجيل فشل الإرسال - بعد 5 فشل متتالي يتم تعطيل المجموعة
+async function markGroupFailed(chatId) {
+  try {
+    await connectDB();
+    const group = await Group.findOne({ chat_id: chatId.toString() });
+    if (!group) return;
+    const newFailCount = (group.fail_count || 0) + 1;
+    const shouldDeactivate = newFailCount >= 5;
+    await Group.updateOne(
+      { chat_id: chatId.toString() },
+      {
+        fail_count: newFailCount,
+        last_failed_at: new Date(),
+        ...(shouldDeactivate ? { active: false } : {})
+      }
+    );
+    if (shouldDeactivate) {
+      console.log(`⚠️ Group ${chatId} deactivated after ${newFailCount} consecutive failures.`);
+    }
+  } catch (e) {
+    console.error('❌ Error marking group failed:', e.message);
+  }
+}
+
+// إعادة تعيين عداد الفشل عند نجاح الإرسال
+async function markGroupSuccess(chatId) {
+  try {
+    await connectDB();
+    await Group.updateOne(
+      { chat_id: chatId.toString(), fail_count: { $gt: 0 } },
+      { fail_count: 0, active: true, last_message_at: new Date() }
+    );
+  } catch (e) {
+    // silent, not critical
   }
 }
 
@@ -158,47 +196,6 @@ function getRandomItem(array) {
   return array[Math.floor(Math.random() * array.length)];
 }
 
-function formatMidnightContent() {
-  const contentTypes = ['verse', 'hadith', 'quote', 'dua'];
-  const selectedType = getRandomItem(contentTypes);
-
-  let message = `🌑 همسة آخر الليل 🌑\n\n`;
-
-  switch (selectedType) {
-    case 'verse':
-      const verse = getRandomItem(verses);
-      message += `🕋 آية وتفسير\n\n`;
-      message += `📜 ${verse.verse}\n\n`;
-      message += `📒 التفسير: ${verse.tafsir}\n`;
-      message += `📍 ${verse.surah}`;
-      break;
-
-    case 'hadith':
-      const hadith = getRandomItem(hadiths);
-      message += `🕌 حديث شريف\n\n`;
-      message += `📜 ${hadith.hadith}\n\n`;
-      message += `📒 الشرح: ${hadith.explanation}\n`;
-      message += `📍 ${hadith.narrator}`;
-      break;
-
-    case 'quote':
-      const quote = getRandomItem(quotes);
-      message += `💡 خاطرة\n\n`;
-      message += `"${quote.quote}"\n\n`;
-      message += `✒️ ${quote.author}`;
-      break;
-
-    case 'dua':
-      const dua = getRandomItem(duas);
-      message += `🤲 دعاء\n\n`;
-      message += `${dua}`;
-      break;
-  }
-
-  message += `\n\nتصبحون على خير 💫`;
-
-  return message;
-}
 
 // ==========================================
 // 📤 دوال النشر (Exported for Cron/API)
@@ -237,8 +234,10 @@ const sendFajrReminder = async (targetChatId) => {
     try {
       await bot.sendMessage(id, message);
       console.log(`✅ Fajr sent to group: ${id}`);
+      markGroupSuccess(id);
     } catch (error) {
       console.error(`❌ Error sending Fajr to ${id}:`, error.message);
+      markGroupFailed(id);
     }
   }
 };
@@ -263,8 +262,10 @@ const sendMorningMessage = async (targetChatId) => {
       const message = formatMorningAthkar();
       await bot.sendMessage(id, message);
       console.log(`✅ Morning sent to group: ${id}`);
+      markGroupSuccess(id);
     } catch (error) {
       console.error(`❌ Error sending Morning to ${id}:`, error.message);
+      markGroupFailed(id);
     }
   }
 };
@@ -312,8 +313,10 @@ const sendMidnightReminder = async (targetChatId) => {
   for (const id of chatIds) {
     try {
       await bot.sendMessage(id, message);
+      markGroupSuccess(id);
     } catch (e) {
       console.error(`Error sending midnight to ${id}:`, e.message);
+      markGroupFailed(id);
     }
   }
 };
@@ -328,8 +331,10 @@ const sendFridayReminder = async (targetChatId, type = 'salawat') => {
   for (const id of chatIds) {
     try {
       await bot.sendMessage(id, content);
+      markGroupSuccess(id);
     } catch (error) {
       console.error(`❌ Error sending Friday ${type} to ${id}:`, error.message);
+      markGroupFailed(id);
     }
   }
 };
@@ -675,6 +680,20 @@ bot.onText(/\/evening/, (msg) => {
 
 bot.onText(/\/chatid/, (msg) => {
   bot.sendMessage(msg.chat.id, `📍 Chat ID: \`${msg.chat.id}\``, { parse_mode: 'Markdown' });
+});
+
+bot.onText(/\/fajr/, (msg) => {
+  logCommand(msg.chat.id, 'fajr');
+  const randomMsg = getRandomItem(fajrReminders);
+  const message = `🌙 تذكير صلاة الفجر 🌙\n━━━━━━━━━━━━━━━━\n\n${randomMsg}\n\n━━━━━━━━━━━━━━━━\nتقبل الله طاعاتكم 🤲`;
+  bot.sendMessage(msg.chat.id, message);
+});
+
+bot.onText(/\/friday/, async (msg) => {
+  logCommand(msg.chat.id, 'friday');
+  await bot.sendMessage(msg.chat.id, fridayReminders.salawat);
+  await bot.sendMessage(msg.chat.id, fridayReminders.kahf);
+  await bot.sendMessage(msg.chat.id, fridayReminders.hourOfResponse);
 });
 
 bot.onText(/\/test_morning/, (msg) => {
