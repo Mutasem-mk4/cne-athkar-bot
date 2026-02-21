@@ -386,6 +386,19 @@ if (isLocal) {
   cron.schedule('00 5 * * *', () => sendFajrReminder(), { timezone: TIMEZONE });
   cron.schedule('00 8 * * *', () => sendMorningMessage(), { timezone: TIMEZONE });
   cron.schedule('00 17 * * *', () => sendEveningMessage(undefined, false), { timezone: TIMEZONE });
+
+  // Friday Special Reminders (Local Cron)
+  cron.schedule('00 10 * * 5', () => {
+    console.log('📅 Friday Morning: Sending Salawat and Kahf...');
+    sendFridayReminder(undefined, 'salawat');
+    sendFridayReminder(undefined, 'kahf');
+  }, { timezone: TIMEZONE });
+
+  cron.schedule('00 16 * * 5', () => {
+    console.log('📅 Friday Afternoon: Sending Hour of Response...');
+    sendFridayReminder(undefined, 'hourOfResponse');
+  }, { timezone: TIMEZONE });
+
   console.log('⏰ Local Cron Jobs Scheduled');
 }
 

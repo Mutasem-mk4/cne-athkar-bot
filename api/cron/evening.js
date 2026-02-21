@@ -1,4 +1,4 @@
-const { sendEveningMessage, pendingPromises } = require('../../bot');
+const { sendEveningMessage, sendFridayReminder, pendingPromises } = require('../../bot');
 
 module.exports = async (req, res) => {
     try {
