@@ -217,16 +217,8 @@ const formatPrayerTimesMessage = (timings) => {
 };
 
 const sendFajrReminder = async (targetChatId) => {
-  let extraContent = '';
-  try {
-    const timings = await getAmmanPrayerTimes();
-    extraContent = `\n\n${formatPrayerTimesMessage(timings)}`;
-  } catch (err) {
-    console.error('Error fetching prayer times for reminder:', err.message);
-  }
-
   const randomMsg = getRandomItem(fajrReminders);
-  const message = `🕌 صلاة الفجر\n\n${randomMsg}${extraContent}\n\nتقبل الله طاعاتكم 🤲`;
+  const message = `🌙 تذكير صلاة الفجر 🌙\n━━━━━━━━━━━━━━━━\n\n${randomMsg}\n\n━━━━━━━━━━━━━━━━\nتقبل الله طاعاتكم 🤲`;
 
   if (targetChatId) {
     console.log('🕌 Sending single FajrReminder to:', targetChatId);
