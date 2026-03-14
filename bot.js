@@ -151,7 +151,7 @@ async function markGroupSuccess(chatId) {
   }
 }
 
-// تنسيق أذكار الصباح (تصميم فخم ومختصر)
+// تنسيق أذكار الصباح (تصميم مريح للعين)
 function formatMorningAthkar() {
   const selectedAthkar = [];
   const shuffled = [...morningAthkar].sort(() => 0.5 - Math.random());
@@ -159,19 +159,19 @@ function formatMorningAthkar() {
     selectedAthkar.push(shuffled[i]);
   }
 
-  let message = `✧ *إشراقة الصباح* ✧\n\n`;
+  let message = `🍃 *أذكار الصباح* 🍃\n\n`;
 
   selectedAthkar.forEach((thikr) => {
-    message += `◈ _${thikr.text}_\n`;
-    message += `   ◌ التكرار: *${thikr.count}*\n\n`;
+    message += `> ${thikr.text}\n`;
+    message += `✨ عدد المرات: *${thikr.count}*\n\n`;
   });
 
-  message += `✨ *للهِ مَا فِي قلوبنا، وللهِ كل السُّبل.*`;
+  message += `🌥️ *للهِ مَا فِي قلوبنا، وللهِ كل السُّبل.*`;
 
   return message;
 }
 
-// تنسيق أذكار المساء (تصميم فخم ومختصر)
+// تنسيق أذكار المساء (تصميم مريح للعين)
 function formatEveningAthkar() {
   const selectedAthkar = [];
   const shuffled = [...eveningAthkar].sort(() => 0.5 - Math.random());
@@ -179,14 +179,14 @@ function formatEveningAthkar() {
     selectedAthkar.push(shuffled[i]);
   }
 
-  let message = `✧ *همسة المساء* ✧\n\n`;
+  let message = `🌙 *أذكار المساء* 🌙\n\n`;
 
   selectedAthkar.forEach((thikr) => {
-    message += `◈ _${thikr.text}_\n`;
-    message += `   ◌ التكرار: *${thikr.count}*\n\n`;
+    message += `> ${thikr.text}\n`;
+    message += `✨ عدد المرات: *${thikr.count}*\n\n`;
   });
 
-  message += `✨ *أمسينا وأمسى الملك لله.*`;
+  message += `🌖 *أمسينا وأمسى الملك لله.*`;
 
   return message;
 }
@@ -241,9 +241,9 @@ const sendMorningMessage = async (targetChatId) => {
 
   // Add Friday Special content if Friday
   if (isFriday) {
-    morningContent += `\n\n💠 *نور ما بين الجمعتين*\n`;
-    morningContent += `📖 ${fridayReminders.kahf}\n`;
-    morningContent += `◈ ${fridayReminders.salawat}`;
+    morningContent += `\n\n📖 *نور ما بين الجمعتين*\n`;
+    morningContent += `> ${fridayReminders.kahf}\n`;
+    morningContent += `🍃 ${fridayReminders.salawat}`;
   }
 
   const chatIds = targetChatId ? [targetChatId] : await getAllGroups();
@@ -307,8 +307,8 @@ async function performSendEvening(targetChatId, includeVideo) {
     
     // Add Friday "Hour of Response" if Friday
     if (isFriday) {
-      message += `\n\n💠 *ساعة استجابة*\n`;
-      message += `◈ _${fridayReminders.hourOfResponse}_`;
+      message += `\n\n✨ *ساعة استجابة*\n`;
+      message += `> ${fridayReminders.hourOfResponse}`;
     }
 
     await bot.sendMessage(targetChatId, message, { parse_mode: 'Markdown' });
@@ -381,18 +381,18 @@ bot.on('callback_query', async (callbackQuery) => {
       case 'thikr':
         const allAthkar = [...morningAthkar, ...eveningAthkar];
         const thikr = getRandomItem(allAthkar);
-        bot.sendMessage(chatId, `◈ *ذكر*\n_${thikr.text}_\n\n◌ التكرار: *${thikr.count}*`, { parse_mode: 'Markdown' });
+        bot.sendMessage(chatId, `🍃 *ذكر*\n> ${thikr.text}\n\n✨ عدد المرات: *${thikr.count}*`, { parse_mode: 'Markdown' });
         break;
       case 'hadith':
         const h = getRandomItem(hadiths);
-        bot.sendMessage(chatId, `◈ *حديث شريف*\n_${h.hadith}_\n\n◌ الراوي: *${h.narrator}*\n◌ الشرح: ${h.explanation}`, { parse_mode: 'Markdown' });
+        bot.sendMessage(chatId, `🕌 *حديث شريف*\n> ${h.hadith}\n\n📍 الراوي: *${h.narrator}*\n💡 الشرح: ${h.explanation}`, { parse_mode: 'Markdown' });
         break;
       case 'verse':
         const v = getRandomItem(verses);
-        bot.sendMessage(chatId, `◈ *آية وتفسير*\n_${v.verse}_\n\n◌ السورة: *${v.surah}*\n◌ التفسير: ${v.tafsir}`, { parse_mode: 'Markdown' });
+        bot.sendMessage(chatId, `🕋 *آية وتفسير*\n> ${v.verse}\n\n📍 السورة: *${v.surah}*\n📒 التفسير: ${v.tafsir}`, { parse_mode: 'Markdown' });
         break;
       case 'dua':
-        bot.sendMessage(chatId, `◈ *دعاء*\n_${getRandomItem(duas)}_`, { parse_mode: 'Markdown' });
+        bot.sendMessage(chatId, `🤲 *دعاء*\n> ${getRandomItem(duas)}`, { parse_mode: 'Markdown' });
         break;
       case 'morning':
         bot.sendMessage(chatId, formatMorningAthkar(), { parse_mode: 'Markdown' });
@@ -406,7 +406,7 @@ bot.on('callback_query', async (callbackQuery) => {
         break;
       case 'quote':
         const q = getRandomItem(quotes);
-        bot.sendMessage(chatId, `◈ *خاطرة*\n_${q.quote}_\n\n◌ القائل: _${q.author}_`, { parse_mode: 'Markdown' });
+        bot.sendMessage(chatId, `💡 *خاطرة*\n> ${q.quote}\n\n✒️ القائل: *${q.author}*`, { parse_mode: 'Markdown' });
         break;
 
     }
@@ -438,30 +438,30 @@ bot.onText(/\/thikr/, (msg) => {
   logCommand(msg.chat.id, 'thikr');
   const allAthkar = [...morningAthkar, ...eveningAthkar];
   const thikr = getRandomItem(allAthkar);
-  bot.sendMessage(msg.chat.id, `◈ *ذكر*\n_${thikr.text}_\n\n◌ التكرار: *${thikr.count}*`, { parse_mode: 'Markdown' });
+  bot.sendMessage(msg.chat.id, `🍃 *ذكر*\n> ${thikr.text}\n\n✨ عدد المرات: *${thikr.count}*`, { parse_mode: 'Markdown' });
 });
 
 bot.onText(/\/hadith/, (msg) => {
   logCommand(msg.chat.id, 'hadith');
   const h = getRandomItem(hadiths);
-  bot.sendMessage(msg.chat.id, `◈ *حديث شريف*\n_${h.hadith}_\n\n◌ الراوي: *${h.narrator}*\n◌ الشرح: ${h.explanation}`, { parse_mode: 'Markdown' });
+  bot.sendMessage(msg.chat.id, `🕌 *حديث شريف*\n> ${h.hadith}\n\n📍 الراوي: *${h.narrator}*\n💡 الشرح: ${h.explanation}`, { parse_mode: 'Markdown' });
 });
 
 bot.onText(/\/verse/, (msg) => {
   logCommand(msg.chat.id, 'verse');
   const v = getRandomItem(verses);
-  bot.sendMessage(msg.chat.id, `◈ *آية وتفسير*\n_${v.verse}_\n\n◌ السورة: *${v.surah}*\n◌ التفسير: ${v.tafsir}`, { parse_mode: 'Markdown' });
+  bot.sendMessage(msg.chat.id, `🕋 *آية وتفسير*\n> ${v.verse}\n\n📍 السورة: *${v.surah}*\n📒 التفسير: ${v.tafsir}`, { parse_mode: 'Markdown' });
 });
 
 bot.onText(/\/dua/, (msg) => {
   logCommand(msg.chat.id, 'dua');
-  bot.sendMessage(msg.chat.id, `◈ *دعاء*\n_${getRandomItem(duas)}_`, { parse_mode: 'Markdown' });
+  bot.sendMessage(msg.chat.id, `🤲 *دعاء*\n> ${getRandomItem(duas)}`, { parse_mode: 'Markdown' });
 });
 
 bot.onText(/\/quote/, (msg) => {
   logCommand(msg.chat.id, 'quote');
   const q = getRandomItem(quotes);
-  bot.sendMessage(msg.chat.id, `◈ *خاطرة*\n_${q.quote}_\n\n◌ القائل: _${q.author}_`, { parse_mode: 'Markdown' });
+  bot.sendMessage(msg.chat.id, `💡 *خاطرة*\n> ${q.quote}\n\n✒️ القائل: *${q.author}*`, { parse_mode: 'Markdown' });
 });
 
 // نظام البث الإداري
