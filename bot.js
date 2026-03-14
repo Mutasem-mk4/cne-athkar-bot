@@ -17,8 +17,7 @@ const {
   quotes,
   duas,
   videos,
-  fajrReminders,
-  fridayReminders
+  fajrReminders
 } = require('./data/content');
 
 const { getAmmanPrayerTimes } = require('./lib/prayer');
@@ -230,21 +229,12 @@ const sendFajrReminder = async (targetChatId) => {
 };
 
 const sendMorningMessage = async (targetChatId) => {
-  const day = new Date().getUTCDay(); // 5 = Friday
-  const isFriday = day === 5;
   
   let morningContent = formatMorningAthkar();
   
   // Merge Fajr Reminder blessing at the top
   const fajrBlessing = getRandomItem(fajrReminders);
   morningContent = `💠 *طاب صباحكم بذكر الله*\n_${fajrBlessing}_\n\n${morningContent}`;
-
-  // Add Friday Special content if Friday
-  if (isFriday) {
-    morningContent += `\n\n📖 *نور ما بين الجمعتين*\n`;
-    morningContent += `> ${fridayReminders.kahf}\n`;
-    morningContent += `🍃 ${fridayReminders.salawat}`;
-  }
 
   const chatIds = targetChatId ? [targetChatId] : await getAllGroups();
   console.log('🌅 Sending MorningMessage to:', chatIds.length, 'groups');
@@ -280,37 +270,11 @@ const sendMidnightReminder = async (targetChatId) => {
   console.log('🌑 sendMidnightReminder called (Deprecated - no message sent)');
 };
 
-const sendFridayReminder = async (targetChatId, type = 'salawat') => {
-  const content = fridayReminders[type];
-  if (!content) return;
-
-  const chatIds = targetChatId ? [targetChatId] : await getAllGroups();
-  console.log(`📅 Sending Friday ${type} reminder to:`, chatIds.length, 'groups');
-
-  for (const id of chatIds) {
-    try {
-      await bot.sendMessage(id, content);
-      markGroupSuccess(id);
-    } catch (error) {
-      console.error(`❌ Error sending Friday ${type} to ${id}:`, error.message);
-      markGroupFailed(id);
-    }
-  }
-};
 
 async function performSendEvening(targetChatId, includeVideo) {
   try {
-    const day = new Date().getUTCDay();
-    const isFriday = day === 5;
-    
     let message = formatEveningAthkar();
     
-    // Add Friday "Hour of Response" if Friday
-    if (isFriday) {
-      message += `\n\n✨ *ساعة استجابة*\n`;
-      message += `> ${fridayReminders.hourOfResponse}`;
-    }
-
     await bot.sendMessage(targetChatId, message, { parse_mode: 'Markdown' });
     console.log(`✅ Evening sent to group: ${targetChatId}`);
     markGroupSuccess(targetChatId);
@@ -525,14 +489,6 @@ bot.onText(/\/broadcast$/, async (msg) => {
   bot.sendMessage(chatId, `✅ اكتمل التوجيه:\n- تم بنجاح: ${success}\n- فشل: ${fail}`);
 });
 
-bot.onText(/\/friday_test/, async (msg) => {
-  const userId = msg.from.id;
-  if (ADMIN_ID && userId.toString() !== ADMIN_ID.toString()) return;
-
-  await sendFridayReminder(msg.chat.id, 'salawat');
-  await sendFridayReminder(msg.chat.id, 'kahf');
-  await sendFridayReminder(msg.chat.id, 'hourOfResponse');
-});
 
 // ذاكرة مؤقتة للإحصائيات لتجنب التعليق
 let statsCache = { data: null, expire: 0 };
@@ -618,14 +574,6 @@ bot.onText(/\/fajr/, (msg) => {
   bot.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' });
 });
 
-bot.onText(/\/friday/, async (msg) => {
-  logCommand(msg.chat.id, 'friday');
-  const message = `📅 *تذكير يوم الجمعة* 📅\n━━━━━━━━━━━━━━━━━━\n\n` +
-    `📿 *الصلاة على النبي:*\n${fridayReminders.salawat}\n\n` +
-    `📖 *سورة الكهف:*\n${fridayReminders.kahf}\n\n` +
-    `⏳ *ساعة الاستجابة:*\n${fridayReminders.hourOfResponse}`;
-  await bot.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' });
-});
 
 bot.onText(/\/test_morning/, (msg) => {
   console.log('🧪 Testing Morning...');
@@ -715,7 +663,6 @@ module.exports = {
   sendMorningMessage,
   sendEveningMessage,
   sendMidnightReminder,
-  sendFridayReminder,
   Video,
   pendingPromises
 };
