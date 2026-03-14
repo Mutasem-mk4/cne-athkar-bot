@@ -151,45 +151,41 @@ async function markGroupSuccess(chatId) {
   }
 }
 
-// تنسيق أذكار الصباح
+// تنسيق أذكار الصباح (تصميم فخم ومختصر)
 function formatMorningAthkar() {
   const selectedAthkar = [];
   const shuffled = [...morningAthkar].sort(() => 0.5 - Math.random());
-  for (let i = 0; i < Math.min(3, shuffled.length); i++) {
+  for (let i = 0; i < Math.min(2, shuffled.length); i++) {
     selectedAthkar.push(shuffled[i]);
   }
 
-  let message = `☀️ *إشراقة الصباح* ☀️\n`;
-  message += `━━━━━━━━━━━━━━━━━━\n\n`;
+  let message = `✧ *إشراقة الصباح* ✧\n\n`;
 
   selectedAthkar.forEach((thikr) => {
-    message += `🔹 _${thikr.text}_\n`;
-    message += `   • التكرار: *${thikr.count}*\n\n`;
+    message += `◈ _${thikr.text}_\n`;
+    message += `   ◌ التكرار: *${thikr.count}*\n\n`;
   });
 
-  message += `━━━━━━━━━━━━━━━━━━\n`;
-  message += `✨ *اللهم بارك لنا في يومنا هذا، واجعل خطواتنا فيه رضا لك.*`;
+  message += `✨ *للهِ مَا فِي قلوبنا، وللهِ كل السُّبل.*`;
 
   return message;
 }
 
-// تنسيق أذكار المساء
+// تنسيق أذكار المساء (تصميم فخم ومختصر)
 function formatEveningAthkar() {
   const selectedAthkar = [];
   const shuffled = [...eveningAthkar].sort(() => 0.5 - Math.random());
-  for (let i = 0; i < Math.min(3, shuffled.length); i++) {
+  for (let i = 0; i < Math.min(2, shuffled.length); i++) {
     selectedAthkar.push(shuffled[i]);
   }
 
-  let message = `🌙 *همسة المساء* 🌙\n`;
-  message += `━━━━━━━━━━━━━━━━━━\n\n`;
+  let message = `✧ *همسة المساء* ✧\n\n`;
 
   selectedAthkar.forEach((thikr) => {
-    message += `🔹 _${thikr.text}_\n`;
-    message += `   • التكرار: *${thikr.count}*\n\n`;
+    message += `◈ _${thikr.text}_\n`;
+    message += `   ◌ التكرار: *${thikr.count}*\n\n`;
   });
 
-  message += `━━━━━━━━━━━━━━━━━━\n`;
   message += `✨ *أمسينا وأمسى الملك لله.*`;
 
   return message;
@@ -241,14 +237,13 @@ const sendMorningMessage = async (targetChatId) => {
   
   // Merge Fajr Reminder blessing at the top
   const fajrBlessing = getRandomItem(fajrReminders);
-  morningContent = `🕌 *طاب صباحكم بذكر الله*\n\n${fajrBlessing}\n\n${morningContent}`;
+  morningContent = `💠 *طاب صباحكم بذكر الله*\n_${fajrBlessing}_\n\n${morningContent}`;
 
   // Add Friday Special content if Friday
   if (isFriday) {
-    morningContent += `\n\n━━━━━━━━━━━━━━━━━━\n`;
-    morningContent += `✨ *نور ما بين الجمعتين*\n`;
+    morningContent += `\n\n💠 *نور ما بين الجمعتين*\n`;
     morningContent += `📖 ${fridayReminders.kahf}\n`;
-    morningContent += `📿 ${fridayReminders.salawat}`;
+    morningContent += `◈ ${fridayReminders.salawat}`;
   }
 
   const chatIds = targetChatId ? [targetChatId] : await getAllGroups();
@@ -312,9 +307,8 @@ async function performSendEvening(targetChatId, includeVideo) {
     
     // Add Friday "Hour of Response" if Friday
     if (isFriday) {
-      message += `\n\n━━━━━━━━━━━━━━━━━━\n`;
-      message += `⏳ *ساعة استجابة*\n`;
-      message += `🤲 ${fridayReminders.hourOfResponse}`;
+      message += `\n\n💠 *ساعة استجابة*\n`;
+      message += `◈ _${fridayReminders.hourOfResponse}_`;
     }
 
     await bot.sendMessage(targetChatId, message, { parse_mode: 'Markdown' });
