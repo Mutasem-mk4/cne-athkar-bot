@@ -2,20 +2,12 @@
     "version": 2,
     "crons": [
         {
-            "path": "/api/cron/fajr",
-            "schedule": "0 2 * * *"
-        },
-        {
             "path": "/api/cron/morning",
             "schedule": "0 5 * * *"
         },
         {
             "path": "/api/cron/evening",
             "schedule": "0 14 * * *"
-        },
-        {
-            "path": "/api/cron/midnight",
-            "schedule": "0 21 * * *"
         }
     ]
 }

@@ -153,41 +153,44 @@ async function markGroupSuccess(chatId) {
 
 // تنسيق أذكار الصباح
 function formatMorningAthkar() {
-  let message = `🌿 إشراقة الصباح 🌿\n\n`;
-
-  // Select 3 random Athkar
   const selectedAthkar = [];
   const shuffled = [...morningAthkar].sort(() => 0.5 - Math.random());
   for (let i = 0; i < Math.min(3, shuffled.length); i++) {
     selectedAthkar.push(shuffled[i]);
   }
 
-  selectedAthkar.forEach((thikr, index) => {
-    message += `🟢 ${thikr.text}\n`;
-    message += `   🎐 ${thikr.count}\n\n`;
+  let message = `☀️ *إشراقة الصباح* ☀️\n`;
+  message += `━━━━━━━━━━━━━━━━━━\n\n`;
+
+  selectedAthkar.forEach((thikr) => {
+    message += `🔹 _${thikr.text}_\n`;
+    message += `   • التكرار: *${thikr.count}*\n\n`;
   });
 
-  message += `🤲 اللهم بارك لنا في يومنا هذا، واجعل خطواتنا فيه رضا لك.\n`;
+  message += `━━━━━━━━━━━━━━━━━━\n`;
+  message += `✨ *اللهم بارك لنا في يومنا هذا، واجعل خطواتنا فيه رضا لك.*`;
 
   return message;
 }
 
-// تنسيق أذكار المساء (قائمة فقط)
+// تنسيق أذكار المساء
 function formatEveningAthkar() {
-  let message = `🌒 همسة المساء 🌒\n\n`;
-
   const selectedAthkar = [];
   const shuffled = [...eveningAthkar].sort(() => 0.5 - Math.random());
   for (let i = 0; i < Math.min(3, shuffled.length); i++) {
     selectedAthkar.push(shuffled[i]);
   }
 
-  selectedAthkar.forEach((thikr, index) => {
-    message += `🟢 ${thikr.text}\n`;
-    message += `   🎐 ${thikr.count}\n\n`;
+  let message = `🌙 *همسة المساء* 🌙\n`;
+  message += `━━━━━━━━━━━━━━━━━━\n\n`;
+
+  selectedAthkar.forEach((thikr) => {
+    message += `🔹 _${thikr.text}_\n`;
+    message += `   • التكرار: *${thikr.count}*\n\n`;
   });
 
-  message += `🤲 أمسينا وأمسى الملك لله.\n`;
+  message += `━━━━━━━━━━━━━━━━━━\n`;
+  message += `✨ *أمسينا وأمسى الملك لله.*`;
 
   return message;
 }
@@ -213,55 +216,47 @@ const formatPrayerTimesMessage = (timings) => {
     `━━━━━━━━━━━━━━━━`;
 };
 
+/** @deprecated Use sendMorningMessage instead which handles Fajr blessing */
 const sendFajrReminder = async (targetChatId) => {
+  console.log('🕌 sendFajrReminder called (Deprecated - please use sendMorningMessage)');
   const randomMsg = getRandomItem(fajrReminders);
   const message = `🌙 تذكير صلاة الفجر 🌙\n━━━━━━━━━━━━━━━━\n\n${randomMsg}\n\n━━━━━━━━━━━━━━━━\nتقبل الله طاعاتكم 🤲`;
-
-  if (targetChatId) {
-    console.log('🕌 Sending single FajrReminder to:', targetChatId);
-    try {
-      await bot.sendMessage(targetChatId, message);
-    } catch (e) {
-      console.error('❌ Error sending single Fajr:', e.message);
-    }
-    return;
-  }
-
-  const chatIds = await getAllGroups();
-  console.log('🕌 Starting bulk sendFajrReminder to:', chatIds.length, 'groups');
-
+  
+  const chatIds = targetChatId ? [targetChatId] : await getAllGroups();
   for (const id of chatIds) {
     try {
       await bot.sendMessage(id, message);
-      console.log(`✅ Fajr sent to group: ${id}`);
       markGroupSuccess(id);
-    } catch (error) {
-      console.error(`❌ Error sending Fajr to ${id}:`, error.message);
+    } catch (e) {
       markGroupFailed(id);
     }
   }
 };
 
 const sendMorningMessage = async (targetChatId) => {
-  if (targetChatId) {
-    console.log('🌅 Sending single MorningMessage to:', targetChatId);
-    try {
-      const message = formatMorningAthkar();
-      await bot.sendMessage(targetChatId, message);
-    } catch (e) {
-      console.error('❌ Error sending single Morning:', e.message);
-    }
-    return;
+  const day = new Date().getUTCDay(); // 5 = Friday
+  const isFriday = day === 5;
+  
+  let morningContent = formatMorningAthkar();
+  
+  // Merge Fajr Reminder blessing at the top
+  const fajrBlessing = getRandomItem(fajrReminders);
+  morningContent = `🕌 *طاب صباحكم بذكر الله*\n\n${fajrBlessing}\n\n${morningContent}`;
+
+  // Add Friday Special content if Friday
+  if (isFriday) {
+    morningContent += `\n\n━━━━━━━━━━━━━━━━━━\n`;
+    morningContent += `✨ *نور ما بين الجمعتين*\n`;
+    morningContent += `📖 ${fridayReminders.kahf}\n`;
+    morningContent += `📿 ${fridayReminders.salawat}`;
   }
 
-  const chatIds = await getAllGroups();
-  console.log('🌅 Starting bulk sendMorningMessage to:', chatIds.length, 'groups');
+  const chatIds = targetChatId ? [targetChatId] : await getAllGroups();
+  console.log('🌅 Sending MorningMessage to:', chatIds.length, 'groups');
 
   for (const id of chatIds) {
     try {
-      const message = formatMorningAthkar();
-      await bot.sendMessage(id, message);
-      console.log(`✅ Morning sent to group: ${id}`);
+      await bot.sendMessage(id, morningContent, { parse_mode: 'Markdown' });
       markGroupSuccess(id);
     } catch (error) {
       console.error(`❌ Error sending Morning to ${id}:`, error.message);
@@ -285,40 +280,9 @@ const sendEveningMessage = async (targetChatId, includeVideo = true) => {
   }
 };
 
+/** @deprecated Midnight reminder is removed to reduce message frequency */
 const sendMidnightReminder = async (targetChatId) => {
-  // Midnight content logic (Verse, Hadith, or Dua only)
-  const types = ['verse', 'hadith', 'dua'];
-  const type = getRandomItem(types);
-
-  let message = `🌑 همسة آخر الليل 🌑\n\n`;
-
-  if (type === 'verse') {
-    const v = getRandomItem(verses);
-    message += `📜 ${v.verse}\n\n${v.tafsir}\n📍 ${v.surah}`;
-  } else if (type === 'hadith') {
-    const h = getRandomItem(hadiths);
-    message += `🕌 ${h.hadith}\n\n${h.explanation}\n📍 ${h.narrator}`;
-  } else {
-    message += `🤲 ${getRandomItem(duas)}`;
-  }
-
-  message += `\n\nتصبحون على خير 💫`;
-
-  if (targetChatId) {
-    await bot.sendMessage(targetChatId, message);
-    return;
-  }
-
-  const chatIds = await getAllGroups();
-  for (const id of chatIds) {
-    try {
-      await bot.sendMessage(id, message);
-      markGroupSuccess(id);
-    } catch (e) {
-      console.error(`Error sending midnight to ${id}:`, e.message);
-      markGroupFailed(id);
-    }
-  }
+  console.log('🌑 sendMidnightReminder called (Deprecated - no message sent)');
 };
 
 const sendFridayReminder = async (targetChatId, type = 'salawat') => {
@@ -341,37 +305,24 @@ const sendFridayReminder = async (targetChatId, type = 'salawat') => {
 
 async function performSendEvening(targetChatId, includeVideo) {
   try {
-    // 1. Try to Send Video from MongoDB (Optional)
-    // ⚠️ User requested NO videos at night/evening. Logic disabled.
-    /*
-    if (includeVideo) {
-      try {
-        await connectDB();
-        const count = await Video.countDocuments();
-        if (count > 0) {
-          const randomIndex = Math.floor(Math.random() * count);
-          const video = await Video.findOne().skip(randomIndex);
-          if (video) {
-            await bot.copyMessage(targetChatId, video.chat_id, video.message_id);
-          }
-        } else if (videos && videos.length > 0) {
-          const staticVideo = getRandomItem(videos);
-          const videoMessage = `🎬 *فيديو اليوم*\n\n${staticVideo.title}\n\n${staticVideo.url}`;
-          await bot.sendMessage(targetChatId, videoMessage);
-        }
-      } catch (dbError) {
-        console.error('⚠️ DB/Video Error (Skipping video):', dbError.message);
-      }
+    const day = new Date().getUTCDay();
+    const isFriday = day === 5;
+    
+    let message = formatEveningAthkar();
+    
+    // Add Friday "Hour of Response" if Friday
+    if (isFriday) {
+      message += `\n\n━━━━━━━━━━━━━━━━━━\n`;
+      message += `⏳ *ساعة استجابة*\n`;
+      message += `🤲 ${fridayReminders.hourOfResponse}`;
     }
-    */
 
-    // 2. Send Text Content
-    // Evening now strictly sends Athkar list, no random content.
-    const message = formatEveningAthkar();
-    await bot.sendMessage(targetChatId, message);
+    await bot.sendMessage(targetChatId, message, { parse_mode: 'Markdown' });
     console.log(`✅ Evening sent to group: ${targetChatId}`);
+    markGroupSuccess(targetChatId);
   } catch (error) {
     console.error(`❌ Error sending Evening to ${targetChatId}:`, error.message);
+    markGroupFailed(targetChatId);
   }
 }
 
@@ -380,23 +331,13 @@ async function performSendEvening(targetChatId, includeVideo) {
 // ==========================================
 
 if (isLocal) {
-  cron.schedule('00 5 * * *', () => sendFajrReminder(), { timezone: TIMEZONE });
+  // Morning includes Fajr blessing and Friday reminders
   cron.schedule('00 8 * * *', () => sendMorningMessage(), { timezone: TIMEZONE });
+  
+  // Evening includes Friday 'Hour of Response'
   cron.schedule('00 17 * * *', () => sendEveningMessage(undefined, false), { timezone: TIMEZONE });
 
-  // Friday Special Reminders (Local Cron)
-  cron.schedule('00 10 * * 5', () => {
-    console.log('📅 Friday Morning: Sending Salawat and Kahf...');
-    sendFridayReminder(undefined, 'salawat');
-    sendFridayReminder(undefined, 'kahf');
-  }, { timezone: TIMEZONE });
-
-  cron.schedule('00 16 * * 5', () => {
-    console.log('📅 Friday Afternoon: Sending Hour of Response...');
-    sendFridayReminder(undefined, 'hourOfResponse');
-  }, { timezone: TIMEZONE });
-
-  console.log('⏰ Local Cron Jobs Scheduled');
+  console.log('⏰ Local Cron Jobs Scheduled (Reduced Frequency Mode)');
 }
 
 // ==========================================
@@ -446,32 +387,32 @@ bot.on('callback_query', async (callbackQuery) => {
       case 'thikr':
         const allAthkar = [...morningAthkar, ...eveningAthkar];
         const thikr = getRandomItem(allAthkar);
-        bot.sendMessage(chatId, `📿 ذكر\n\n${thikr.text}\n\n📖 ${thikr.count}`);
+        bot.sendMessage(chatId, `📿 *ذكر*\n━━━━━━━━━━━━━━━━━━\n\n🔹 _${thikr.text}_\n\n📖 التكرار: *${thikr.count}*`, { parse_mode: 'Markdown' });
         break;
       case 'hadith':
         const h = getRandomItem(hadiths);
-        bot.sendMessage(chatId, `🕌 حديث شريف\n\n${h.hadith}\n\n📍 ${h.narrator}\n\n💡 الشرح: ${h.explanation}`);
+        bot.sendMessage(chatId, `🕌 *حديث شريف*\n━━━━━━━━━━━━━━━━━━\n\n🔹 _${h.hadith}_\n\n📍 الراوي: *${h.narrator}*\n💡 الشرح: ${h.explanation}`, { parse_mode: 'Markdown' });
         break;
       case 'verse':
         const v = getRandomItem(verses);
-        bot.sendMessage(chatId, `🕋 آية وتفسير\n\n${v.verse}\n\n📍 ${v.surah}\n\n📒 التفسير: ${v.tafsir}`);
+        bot.sendMessage(chatId, `🕋 *آية وتفسير*\n━━━━━━━━━━━━━━━━━━\n\n🔹 _${v.verse}_\n\n📍 السورة: *${v.surah}*\n📒 التفسير: ${v.tafsir}`, { parse_mode: 'Markdown' });
         break;
       case 'dua':
-        bot.sendMessage(chatId, `🤲 دعاء\n\n${getRandomItem(duas)}`);
+        bot.sendMessage(chatId, `🤲 *دعاء*\n━━━━━━━━━━━━━━━━━━\n\n🔹 _${getRandomItem(duas)}_`, { parse_mode: 'Markdown' });
         break;
       case 'morning':
-        bot.sendMessage(chatId, formatMorningAthkar());
+        bot.sendMessage(chatId, formatMorningAthkar(), { parse_mode: 'Markdown' });
         break;
       case 'evening':
-        bot.sendMessage(chatId, formatEveningAthkar());
+        bot.sendMessage(chatId, formatEveningAthkar(), { parse_mode: 'Markdown' });
         break;
       case 'prayers':
         const timings = await getAmmanPrayerTimes();
-        bot.sendMessage(chatId, formatPrayerTimesMessage(timings));
+        bot.sendMessage(chatId, formatPrayerTimesMessage(timings), { parse_mode: 'Markdown' });
         break;
       case 'quote':
         const q = getRandomItem(quotes);
-        bot.sendMessage(chatId, `💡 خاطرة\n\n"${q.quote}"\n\n✒️ ${q.author}`);
+        bot.sendMessage(chatId, `💡 *خاطرة*\n\n"${q.quote}"\n\n✒️ _${q.author}_`, { parse_mode: 'Markdown' });
         break;
 
     }
@@ -486,7 +427,7 @@ bot.on('callback_query', async (callbackQuery) => {
 bot.onText(/\/prayers/, async (msg) => {
   try {
     const timings = await getAmmanPrayerTimes();
-    bot.sendMessage(msg.chat.id, formatPrayerTimesMessage(timings));
+    bot.sendMessage(msg.chat.id, formatPrayerTimesMessage(timings), { parse_mode: 'Markdown' });
   } catch (err) {
     console.error('Prayers Command Error:', err.message);
     bot.sendMessage(msg.chat.id, `⚠️ عذراً، هنالك مشكلة: ${err.message}`);
@@ -495,39 +436,38 @@ bot.onText(/\/prayers/, async (msg) => {
 
 bot.onText(/\/help/, (msg) => {
   logCommand(msg.chat.id, 'help');
-  const helpMessage = `📚 *دليل استخدام البوت*\n\n/thikr - ذكر\n/morning - أذكار الصباح\n/evening - أذكار المساء\n...`;
-  bot.sendMessage(msg.chat.id, helpMessage);
+  const helpMessage = `📚 *دليل استخدام البوت*\n\n/morning - أذكار الصباح\n/evening - أذكار المساء\n/menu - القائمة الرئيسية\n/prayers - مواقيت الصلاة`;
+  bot.sendMessage(msg.chat.id, helpMessage, { parse_mode: 'Markdown' });
 });
 
 bot.onText(/\/thikr/, (msg) => {
   logCommand(msg.chat.id, 'thikr');
   const allAthkar = [...morningAthkar, ...eveningAthkar];
   const thikr = getRandomItem(allAthkar);
-  bot.sendMessage(msg.chat.id, `📿 ذكر\n\n${thikr.text}\n\n📖 ${thikr.count}`);
+  bot.sendMessage(msg.chat.id, `📿 *ذكر*\n━━━━━━━━━━━━━━━━━━\n\n🔹 _${thikr.text}_\n\n📖 التكرار: *${thikr.count}*`, { parse_mode: 'Markdown' });
 });
 
 bot.onText(/\/hadith/, (msg) => {
   logCommand(msg.chat.id, 'hadith');
-  const hadith = getRandomItem(hadiths);
-  bot.sendMessage(msg.chat.id, `🕌 حديث شريف\n\n${hadith.hadith}\n\n📍 ${hadith.narrator}\n\n💡 الشرح: ${hadith.explanation}`);
+  const h = getRandomItem(hadiths);
+  bot.sendMessage(msg.chat.id, `🕌 *حديث شريف*\n━━━━━━━━━━━━━━━━━━\n\n🔹 _${h.hadith}_\n\n📍 الراوي: *${h.narrator}*\n💡 الشرح: ${h.explanation}`, { parse_mode: 'Markdown' });
 });
 
 bot.onText(/\/verse/, (msg) => {
   logCommand(msg.chat.id, 'verse');
-  const verse = getRandomItem(verses);
-  bot.sendMessage(msg.chat.id, `🕋 آية وتفسير\n\n${verse.verse}\n\n📍 ${verse.surah}\n\n📒 التفسير: ${verse.tafsir}`);
+  const v = getRandomItem(verses);
+  bot.sendMessage(msg.chat.id, `🕋 *آية وتفسير*\n━━━━━━━━━━━━━━━━━━\n\n🔹 _${v.verse}_\n\n📍 السورة: *${v.surah}*\n📒 التفسير: ${v.tafsir}`, { parse_mode: 'Markdown' });
 });
 
 bot.onText(/\/dua/, (msg) => {
   logCommand(msg.chat.id, 'dua');
-  const dua = getRandomItem(duas);
-  bot.sendMessage(msg.chat.id, `🤲 دعاء\n\n${dua}`);
+  bot.sendMessage(msg.chat.id, `🤲 *دعاء*\n━━━━━━━━━━━━━━━━━━\n\n🔹 _${getRandomItem(duas)}_`, { parse_mode: 'Markdown' });
 });
 
 bot.onText(/\/quote/, (msg) => {
   logCommand(msg.chat.id, 'quote');
-  const quote = getRandomItem(quotes);
-  bot.sendMessage(msg.chat.id, `💡 خاطرة\n\n"${quote.quote}"\n\n✒️ ${quote.author}`);
+  const q = getRandomItem(quotes);
+  bot.sendMessage(msg.chat.id, `💡 *خاطرة*\n━━━━━━━━━━━━━━━━━━\n\n🔹 _${q.quote}_\n\n✒️ القائل: _${q.author}_`, { parse_mode: 'Markdown' });
 });
 
 // نظام البث الإداري
@@ -665,17 +605,12 @@ bot.onText(/\/stats/, async (msg) => {
 
 bot.onText(/\/morning/, (msg) => {
   logCommand(msg.chat.id, 'morning');
-  bot.sendMessage(msg.chat.id, formatMorningAthkar());
+  bot.sendMessage(msg.chat.id, formatMorningAthkar(), { parse_mode: 'Markdown' });
 });
 
 bot.onText(/\/evening/, (msg) => {
-  let message = `🌙 أذكار المساء\n━━━━━━━━━━━━━━━━\n\n`;
-  const selectedAthkar = eveningAthkar.slice(0, 3);
-  selectedAthkar.forEach((thikr, index) => {
-    message += `${index + 1}. ${thikr.text}\n   📖 ${thikr.count}\n\n`;
-  });
-  message += `━━━━━━━━━━━━━━━━\n🤲 اللهم بارك لنا في ليلتنا`;
-  bot.sendMessage(msg.chat.id, message);
+  logCommand(msg.chat.id, 'evening');
+  bot.sendMessage(msg.chat.id, formatEveningAthkar(), { parse_mode: 'Markdown' });
 });
 
 bot.onText(/\/chatid/, (msg) => {
@@ -685,15 +620,17 @@ bot.onText(/\/chatid/, (msg) => {
 bot.onText(/\/fajr/, (msg) => {
   logCommand(msg.chat.id, 'fajr');
   const randomMsg = getRandomItem(fajrReminders);
-  const message = `🌙 تذكير صلاة الفجر 🌙\n━━━━━━━━━━━━━━━━\n\n${randomMsg}\n\n━━━━━━━━━━━━━━━━\nتقبل الله طاعاتكم 🤲`;
-  bot.sendMessage(msg.chat.id, message);
+  const message = `🌙 *تذكير صلاة الفجر* 🌙\n━━━━━━━━━━━━━━━━━━\n\n${randomMsg}\n\n━━━━━━━━━━━━━━━━━━\n✨ *تقبل الله طاعاتكم*`;
+  bot.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' });
 });
 
 bot.onText(/\/friday/, async (msg) => {
   logCommand(msg.chat.id, 'friday');
-  await bot.sendMessage(msg.chat.id, fridayReminders.salawat);
-  await bot.sendMessage(msg.chat.id, fridayReminders.kahf);
-  await bot.sendMessage(msg.chat.id, fridayReminders.hourOfResponse);
+  const message = `📅 *تذكير يوم الجمعة* 📅\n━━━━━━━━━━━━━━━━━━\n\n` +
+    `📿 *الصلاة على النبي:*\n${fridayReminders.salawat}\n\n` +
+    `📖 *سورة الكهف:*\n${fridayReminders.kahf}\n\n` +
+    `⏳ *ساعة الاستجابة:*\n${fridayReminders.hourOfResponse}`;
+  await bot.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' });
 });
 
 bot.onText(/\/test_morning/, (msg) => {
