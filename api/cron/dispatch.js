@@ -1,10 +1,4 @@
-const {
-    sendFajrReminder,
-    sendMorningMessage,
-    sendEveningMessage,
-    sendMidnightReminder,
-    pendingPromises
-} = require('../../bot');
+const botModule = require('../../bot');
 
 module.exports = async (req, res) => {
     try {
@@ -16,11 +10,11 @@ module.exports = async (req, res) => {
 
         // Dispatcher is now retired in favor of specific endpoints.
         console.log('ℹ️ Dispatcher reached - ignoring automated task to prevent duplicates.');
-        // No action taken here. 
+        // No action taken here.
 
 
-        if (pendingPromises && pendingPromises.length > 0) {
-            await Promise.all(pendingPromises);
+        if (botModule.pendingPromises && botModule.pendingPromises.length > 0) {
+            await Promise.all(botModule.pendingPromises);
         }
 
         res.status(200).json({

@@ -1,4 +1,4 @@
-const { sendMorningMessage, sendFridayReminder, pendingPromises } = require('../../bot');
+const botModule = require('../../bot');
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -10,10 +10,10 @@ module.exports = async (req, res) => {
 
     try {
         console.log('Running Morning Cron...');
-        await sendMorningMessage();
+        await botModule.sendMorningMessage();
 
-        if (pendingPromises && pendingPromises.length > 0) {
-            await Promise.all(pendingPromises);
+        if (botModule.pendingPromises && botModule.pendingPromises.length > 0) {
+            await Promise.all(botModule.pendingPromises);
         }
 
         res.status(200).json({ status: 'success', task: 'morning' });

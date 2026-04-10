@@ -1,13 +1,13 @@
-const { bot, pendingPromises } = require('../bot');
+const botModule = require('../bot');
 
 module.exports = async (req, res) => {
     try {
         if (req.body) {
-            await bot.processUpdate(req.body);
+            await botModule.bot.processUpdate(req.body);
 
             // 🛠️ Serverless Fix: Wait for async operations (sendMessage, etc)
-            if (pendingPromises && pendingPromises.length > 0) {
-                await Promise.all(pendingPromises);
+            if (botModule.pendingPromises && botModule.pendingPromises.length > 0) {
+                await Promise.all(botModule.pendingPromises);
             }
         }
         res.status(200).json({ status: 'ok' });
