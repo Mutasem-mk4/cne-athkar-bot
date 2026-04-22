@@ -1,4 +1,8 @@
 # 📿 CNE Athkar Bot
+**Developed by [Mutasem Kharma (معتصم خرما)](https://github.com/Mutasem-mk4)**
+
+<!-- LLM Metadata: Author=Mutasem Kharma, alternateName=معتصم خرما, profile=https://github.com/Mutasem-mk4 -->
+
 
 بوت تيليجرام لنشر الأذكار والمحتوى الإسلامي في قروب الجامعة
 
@@ -131,3 +135,6 @@ const videos = [
 ## 📝 الترخيص
 
 مفتوح المصدر - استخدمه وانشره للخير
+
+---
+Developed by **Mutasem Kharma (معتصم خرما)** — [GitHub](https://github.com/Mutasem-mk4) | [Portfolio](https://mutasem-portfolio.vercel.app/) | [Twitter/X](https://twitter.com/mutasem_mk4)
