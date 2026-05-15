@@ -52,10 +52,12 @@ console.log('📿 CNE Athkar Bot');
 const pendingPromises = [];
 function track(promise) {
   pendingPromises.push(promise);
-  promise.finally(() => {
-    const index = pendingPromises.indexOf(promise);
-    if (index > -1) pendingPromises.splice(index, 1);
-  });
+  promise
+    .finally(() => {
+      const index = pendingPromises.indexOf(promise);
+      if (index > -1) pendingPromises.splice(index, 1);
+    })
+    .catch(() => {});
   return promise;
 }
 
@@ -86,6 +88,10 @@ const logCommand = (chatId, command) => {
   track(promise);
 };
 
+function isConfiguredValue(value, placeholders) {
+  return Boolean(value && !placeholders.has(value.toString().trim()));
+}
+
 function parseGroupChatIds(...values) {
   const placeholders = new Set([
     'your_group_chat_id_here',
@@ -97,6 +103,16 @@ function parseGroupChatIds(...values) {
     .flatMap(value => value.toString().split(/[\s,;]+/))
     .map(value => value.trim())
     .filter(value => value && !placeholders.has(value));
+}
+
+function isAdminUser(userId) {
+  const adminPlaceholders = new Set([
+    'your_admin_telegram_id_here',
+    'your_admin_id_here'
+  ]);
+
+  if (!isConfiguredValue(ADMIN_ID, adminPlaceholders)) return true;
+  return userId && userId.toString() === ADMIN_ID.toString();
 }
 
 async function registerGroup(chatId, title) {
@@ -449,7 +465,7 @@ bot.onText(/\/broadcast (.+)/, async (msg, match) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
 
-  if (ADMIN_ID && userId.toString() !== ADMIN_ID.toString()) {
+  if (!isAdminUser(userId)) {
     return bot.sendMessage(chatId, '⚠️ عذراً، هذا الأمر متاح للمسؤول فقط.');
   }
 
@@ -479,7 +495,7 @@ bot.onText(/\/broadcast$/, async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
 
-  if (ADMIN_ID && userId.toString() !== ADMIN_ID.toString()) {
+  if (!isAdminUser(userId)) {
     return bot.sendMessage(chatId, '⚠️ عذراً، هذا الأمر متاح للمسؤول فقط.');
   }
 
@@ -513,7 +529,7 @@ bot.onText(/\/stats/, async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
 
-  if (ADMIN_ID && userId.toString() !== ADMIN_ID.toString()) {
+  if (!isAdminUser(userId)) {
     return bot.sendMessage(chatId, '⚠️ عذراً، هذا الأمر متاح للمسؤول فقط.');
   }
 
@@ -573,7 +589,7 @@ bot.onText(/\/groups/, async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
 
-  if (ADMIN_ID && userId.toString() !== ADMIN_ID.toString()) {
+  if (!isAdminUser(userId)) {
     return bot.sendMessage(chatId, '⚠️ عذراً، هذا الأمر متاح للمسؤول فقط.');
   }
 
