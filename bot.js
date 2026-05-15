@@ -120,8 +120,8 @@ function isAdminUser(userId) {
   return userId && userId.toString() === ADMIN_ID.toString();
 }
 
-async function registerGroup(chatId, title) {
-  if (!chatId || (typeof chatId === 'string' && chatId.startsWith('-100') === false && chatId.startsWith('-') === false)) return;
+async function registerGroup(chatId, title, options = {}) {
+  if (!chatId || (typeof chatId === 'string' && chatId.startsWith('-100') === false && chatId.startsWith('-') === false)) return false;
   try {
     await connectDB();
     await Group.findOneAndUpdate(
@@ -129,25 +129,43 @@ async function registerGroup(chatId, title) {
       { title: title || 'Group', last_message_at: Date.now(), active: true, fail_count: 0 },
       { upsert: true }
     );
+    return true;
   } catch (error) {
     console.error('❌ Error registering group:', error.message);
+    if (options.throwOnError) throw error;
+    return false;
   }
 }
 
 async function getAllGroups() {
+  const sources = await getGroupSources();
+  return sources.chatIds;
+}
+
+async function getGroupSources() {
   const envGroupIds = parseGroupChatIds(GROUP_CHAT_ID, GROUP_CHAT_IDS);
+  const dbGroups = [];
+  let dbError = null;
 
   try {
     await connectDB();
-    // نجلب المجموعات النشطة فقط (active: true)
-    const dbGroups = await Group.find({ active: { $ne: false } });
-    const chatIds = new Set(dbGroups.map(g => g.chat_id));
-    envGroupIds.forEach(id => chatIds.add(id));
-    return Array.from(chatIds);
+    dbGroups.push(...await Group.find({}));
   } catch (error) {
     console.error('❌ Error fetching groups:', error.message);
-    return envGroupIds;
+    dbError = error;
   }
+
+  const activeDbGroups = dbGroups.filter(group => group.active !== false);
+  const chatIds = new Set(activeDbGroups.map(group => group.chat_id));
+  envGroupIds.forEach(id => chatIds.add(id));
+
+  return {
+    chatIds: Array.from(chatIds),
+    envGroupIds,
+    dbGroups,
+    activeDbGroups,
+    dbError
+  };
 }
 
 // تسجيل فشل الإرسال - بعد 5 فشل متتالي يتم تعطيل المجموعة
@@ -612,15 +630,59 @@ bot.onText(/\/groups/, async (msg) => {
   }
 
   try {
-    const chatIds = await getAllGroups();
+    const sources = await getGroupSources();
+    const chatIds = sources.chatIds;
+    const dbStatus = sources.dbError
+      ? '❌ MongoDB غير متصل، لذلك تظهر فقط مجموعات ENV'
+      : `✅ MongoDB: ${sources.activeDbGroups.length} نشطة من أصل ${sources.dbGroups.length}`;
+
     await sendReply(
       msg,
       `👥 مجموعات الإرسال النشطة: ${chatIds.length}\n` +
+      `${dbStatus}\n` +
+      `⚙️ ENV: ${sources.envGroupIds.length}\n\n` +
       chatIds.map((id, index) => `${index + 1}. \`${id}\``).join('\n'),
       { parse_mode: 'Markdown' }
     );
   } catch (e) {
     sendReply(msg, `❌ خطأ في جلب المجموعات: ${e.message}`);
+  }
+});
+
+bot.onText(/\/addgroup(?:\s+(-?\d+))?/, async (msg, match) => {
+  const userId = msg.from.id;
+
+  if (!isAdminUser(userId)) {
+    return sendReply(msg, '⚠️ عذراً، هذا الأمر متاح للمسؤول فقط.');
+  }
+
+  const chatIdToAdd = match[1] || ((msg.chat.type === 'group' || msg.chat.type === 'supergroup') ? msg.chat.id : null);
+
+  if (!chatIdToAdd) {
+    return sendReply(msg, 'ℹ️ استخدم الأمر هكذا: `/addgroup -1001234567890` أو أرسله داخل القروب نفسه.', { parse_mode: 'Markdown' });
+  }
+
+  try {
+    await registerGroup(chatIdToAdd, msg.chat.title || 'Manual group', { throwOnError: true });
+    await sendReply(msg, `✅ تم تسجيل القروب: \`${chatIdToAdd}\``, { parse_mode: 'Markdown' });
+  } catch (e) {
+    await sendReply(msg, `❌ لم يتم تسجيل القروب: ${e.message}`);
+  }
+});
+
+bot.onText(/\/activategroups/, async (msg) => {
+  const userId = msg.from.id;
+
+  if (!isAdminUser(userId)) {
+    return sendReply(msg, '⚠️ عذراً، هذا الأمر متاح للمسؤول فقط.');
+  }
+
+  try {
+    await connectDB();
+    const result = await Group.updateMany({}, { active: true, fail_count: 0 });
+    await sendReply(msg, `✅ تم تفعيل ${result.modifiedCount || 0} قروب.`);
+  } catch (e) {
+    await sendReply(msg, `❌ لم يتم تفعيل القروبات: ${e.message}`);
   }
 });
 
