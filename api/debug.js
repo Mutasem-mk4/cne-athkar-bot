@@ -6,6 +6,7 @@ module.exports = (req, res) => {
             BOT_TOKEN_EXISTS: !!process.env.BOT_TOKEN,
             BOT_TOKEN_LENGTH: process.env.BOT_TOKEN ? process.env.BOT_TOKEN.length : 0,
             GROUP_CHAT_ID_EXISTS: !!process.env.GROUP_CHAT_ID,
+            GROUP_CHAT_IDS_EXISTS: !!process.env.GROUP_CHAT_IDS,
             TIMEZONE: process.env.TIMEZONE,
             MONGODB_URI_EXISTS: !!process.env.MONGODB_URI,
             NODE_VERSION: process.version,

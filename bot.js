@@ -28,6 +28,7 @@ const { getAmmanPrayerTimes } = require('./lib/prayer');
 
 const BOT_TOKEN = (process.env.BOT_TOKEN || '').trim();
 const GROUP_CHAT_ID = process.env.GROUP_CHAT_ID;
+const GROUP_CHAT_IDS = process.env.GROUP_CHAT_IDS;
 const TIMEZONE = process.env.TIMEZONE || 'Asia/Amman';
 const ADMIN_ID = process.env.ADMIN_ID; // معرف المسؤول للبث
 
@@ -85,6 +86,19 @@ const logCommand = (chatId, command) => {
   track(promise);
 };
 
+function parseGroupChatIds(...values) {
+  const placeholders = new Set([
+    'your_group_chat_id_here',
+    'your_group_chat_ids_here'
+  ]);
+
+  return values
+    .filter(Boolean)
+    .flatMap(value => value.toString().split(/[\s,;]+/))
+    .map(value => value.trim())
+    .filter(value => value && !placeholders.has(value));
+}
+
 async function registerGroup(chatId, title) {
   if (!chatId || (typeof chatId === 'string' && chatId.startsWith('-100') === false && chatId.startsWith('-') === false)) return;
   try {
@@ -100,16 +114,18 @@ async function registerGroup(chatId, title) {
 }
 
 async function getAllGroups() {
+  const envGroupIds = parseGroupChatIds(GROUP_CHAT_ID, GROUP_CHAT_IDS);
+
   try {
     await connectDB();
     // نجلب المجموعات النشطة فقط (active: true)
     const dbGroups = await Group.find({ active: { $ne: false } });
     const chatIds = new Set(dbGroups.map(g => g.chat_id));
-    if (GROUP_CHAT_ID) chatIds.add(GROUP_CHAT_ID.toString());
+    envGroupIds.forEach(id => chatIds.add(id));
     return Array.from(chatIds);
   } catch (error) {
     console.error('❌ Error fetching groups:', error.message);
-    return GROUP_CHAT_ID ? [GROUP_CHAT_ID.toString()] : [];
+    return envGroupIds;
   }
 }
 
@@ -553,6 +569,27 @@ bot.onText(/\/stats/, async (msg) => {
   }
 });
 
+bot.onText(/\/groups/, async (msg) => {
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+
+  if (ADMIN_ID && userId.toString() !== ADMIN_ID.toString()) {
+    return bot.sendMessage(chatId, '⚠️ عذراً، هذا الأمر متاح للمسؤول فقط.');
+  }
+
+  try {
+    const chatIds = await getAllGroups();
+    await bot.sendMessage(
+      chatId,
+      `👥 مجموعات الإرسال النشطة: ${chatIds.length}\n` +
+      chatIds.map((id, index) => `${index + 1}. \`${id}\``).join('\n'),
+      { parse_mode: 'Markdown' }
+    );
+  } catch (e) {
+    bot.sendMessage(chatId, `❌ خطأ في جلب المجموعات: ${e.message}`);
+  }
+});
+
 bot.onText(/\/morning/, (msg) => {
   logCommand(msg.chat.id, 'morning');
   bot.sendMessage(msg.chat.id, formatMorningAthkar(), { parse_mode: 'Markdown' });
@@ -663,6 +700,7 @@ module.exports = {
   sendMorningMessage,
   sendEveningMessage,
   sendMidnightReminder,
+  getAllGroups,
   Video,
   pendingPromises
 };
