@@ -622,7 +622,7 @@ bot.onText(/\/stats/, async (msg) => {
   }
 });
 
-bot.onText(/\/groups/, async (msg) => {
+bot.onText(/\/gr(?:ou|u)ps/, async (msg) => {
   const userId = msg.from.id;
 
   if (!isAdminUser(userId)) {
