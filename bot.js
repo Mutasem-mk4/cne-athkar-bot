@@ -61,6 +61,12 @@ function track(promise) {
   return promise;
 }
 
+function background(promise) {
+  promise.catch(error => {
+    console.error('❌ Background task failed:', error.message);
+  });
+}
+
 // Intercept common methods to track them
 ['sendMessage', 'copyMessage', 'forwardMessage'].forEach(method => {
   if (bot[method]) {
@@ -76,7 +82,7 @@ function track(promise) {
 
 const logCommand = (chatId, command) => {
   if (!chatId || !command) return;
-  const promise = (async () => {
+  background((async () => {
     try {
       await connectDB();
       const log = new CommandLog({ chat_id: chatId.toString(), command });
@@ -84,8 +90,7 @@ const logCommand = (chatId, command) => {
     } catch (e) {
       console.error(`❌ Error logging ${command}:`, e.message);
     }
-  })();
-  track(promise);
+  })());
 };
 
 function isConfiguredValue(value, placeholders) {
@@ -670,7 +675,7 @@ bot.onText(/\/status/, (msg) => {
 bot.on('message', async (msg) => {
   // تسجيل الجروب تلقائياً
   if (msg.chat.type === 'group' || msg.chat.type === 'supergroup') {
-    track(registerGroup(msg.chat.id, msg.chat.title));
+    background(registerGroup(msg.chat.id, msg.chat.title));
   }
 
   if (msg.chat.type === 'private' && msg.video) {
