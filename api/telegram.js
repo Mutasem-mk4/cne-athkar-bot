@@ -44,9 +44,13 @@ module.exports = async (req, res) => {
             await telegramRequest('setWebhook', { url: WEBHOOK_URL });
         }
 
-        const info = await telegramRequest('getWebhookInfo');
+        const [info, me] = await Promise.all([
+            telegramRequest('getWebhookInfo'),
+            telegramRequest('getMe')
+        ]);
         res.status(200).json({
             status: 'ok',
+            bot_username: me.username,
             webhook_url: info.url,
             has_custom_certificate: info.has_custom_certificate,
             pending_update_count: info.pending_update_count,

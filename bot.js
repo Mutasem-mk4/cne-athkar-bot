@@ -353,19 +353,33 @@ const getMainMenu = () => {
   };
 };
 
+function withReplyContext(msg, options = {}) {
+  if (msg && msg.message_thread_id) {
+    return { ...options, message_thread_id: msg.message_thread_id };
+  }
+  return options;
+}
+
+function sendReply(msg, text, options = {}) {
+  return bot.sendMessage(msg.chat.id, text, withReplyContext(msg, options));
+}
+
 bot.onText(/\/start/, (msg) => {
-  const chatId = msg.chat.id;
   const welcomeMessage = `
 🌟 *أهلاً بك في بوت CNE Athkar*
 📿 بوت أذكار قروب الجامعة
 
 يمكنك استخدام القائمة أدناه للوصول السريع للأذكار والمحتوى الإسلامي:
   `;
-  bot.sendMessage(chatId, welcomeMessage, getMainMenu());
+  sendReply(msg, welcomeMessage, getMainMenu());
 });
 
 bot.onText(/\/menu/, (msg) => {
-  bot.sendMessage(msg.chat.id, '📋 *القائمة الرئيسية*', getMainMenu());
+  sendReply(msg, '📋 *القائمة الرئيسية*', getMainMenu());
+});
+
+bot.onText(/\/ping/, (msg) => {
+  sendReply(msg, '✅ Pong');
 });
 
 // التعامل مع الضغط على الأزرار
@@ -591,23 +605,22 @@ bot.onText(/\/stats/, async (msg) => {
 });
 
 bot.onText(/\/groups/, async (msg) => {
-  const chatId = msg.chat.id;
   const userId = msg.from.id;
 
   if (!isAdminUser(userId)) {
-    return bot.sendMessage(chatId, '⚠️ عذراً، هذا الأمر متاح للمسؤول فقط.');
+    return sendReply(msg, '⚠️ عذراً، هذا الأمر متاح للمسؤول فقط.');
   }
 
   try {
     const chatIds = await getAllGroups();
-    await bot.sendMessage(
-      chatId,
+    await sendReply(
+      msg,
       `👥 مجموعات الإرسال النشطة: ${chatIds.length}\n` +
       chatIds.map((id, index) => `${index + 1}. \`${id}\``).join('\n'),
       { parse_mode: 'Markdown' }
     );
   } catch (e) {
-    bot.sendMessage(chatId, `❌ خطأ في جلب المجموعات: ${e.message}`);
+    sendReply(msg, `❌ خطأ في جلب المجموعات: ${e.message}`);
   }
 });
 
@@ -622,7 +635,7 @@ bot.onText(/\/evening/, (msg) => {
 });
 
 bot.onText(/\/chatid/, (msg) => {
-  bot.sendMessage(msg.chat.id, `📍 Chat ID: \`${msg.chat.id}\``, { parse_mode: 'Markdown' });
+  sendReply(msg, `📍 Chat ID: \`${msg.chat.id}\``, { parse_mode: 'Markdown' });
 });
 
 bot.onText(/\/fajr/, (msg) => {
