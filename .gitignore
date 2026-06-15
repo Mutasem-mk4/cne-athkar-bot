@@ -17,3 +17,5 @@ Thumbs.db
 
 # Local JSON Database Fallback
 local_db/
+
+.env*.local
