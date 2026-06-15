@@ -14,3 +14,6 @@ Thumbs.db
 # Logs
 *.log
 .vercel
+
+# Local JSON Database Fallback
+local_db/

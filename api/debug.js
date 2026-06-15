@@ -1,5 +1,3 @@
-const mongoose = require('mongoose');
-
 module.exports = (req, res) => {
     try {
         const envCheck = {
@@ -8,9 +6,11 @@ module.exports = (req, res) => {
             GROUP_CHAT_ID_EXISTS: !!process.env.GROUP_CHAT_ID,
             GROUP_CHAT_IDS_EXISTS: !!process.env.GROUP_CHAT_IDS,
             TIMEZONE: process.env.TIMEZONE,
-            MONGODB_URI_EXISTS: !!process.env.MONGODB_URI,
+            GITHUB_TOKEN_EXISTS: !!process.env.GITHUB_TOKEN,
+            GITHUB_REPO_EXISTS: !!process.env.GITHUB_REPO,
+            GITHUB_BRANCH: process.env.GITHUB_BRANCH || 'main',
             NODE_VERSION: process.version,
-            MONGO_STATE: mongoose.connection.readyState
+            STORAGE_MODE: (process.env.GITHUB_TOKEN && process.env.GITHUB_REPO) ? 'GitHub DB' : 'Local JSON'
         };
 
         res.status(200).json({ status: 'debug_info', env: envCheck });

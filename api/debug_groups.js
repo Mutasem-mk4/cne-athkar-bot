@@ -1,10 +1,9 @@
-const connectDB = require('../lib/db');
-const Group = require('../models/Group');
+const db = require('../lib/db');
 
 module.exports = async (req, res) => {
     try {
-        await connectDB();
-        const groups = await Group.find({});
+        const sources = await db.getGroupSources();
+        const groups = sources.dbGroups;
 
         // Mask chat IDs for privacy/security display
         const safeGroups = groups.map(g => ({

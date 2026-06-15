@@ -5,10 +5,7 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const cron = require('node-cron');
-const connectDB = require('./lib/db');
-const Video = require('./models/Video');
-const Group = require('./models/Group');
-const CommandLog = require('./models/CommandLog');
+const db = require('./lib/db');
 const {
   morningAthkar,
   eveningAthkar,
@@ -84,9 +81,7 @@ const logCommand = (chatId, command) => {
   if (!chatId || !command) return;
   background((async () => {
     try {
-      await connectDB();
-      const log = new CommandLog({ chat_id: chatId.toString(), command });
-      await log.save();
+      await db.logCommand(chatId, command);
     } catch (e) {
       console.error(`❌ Error logging ${command}:`, e.message);
     }
@@ -123,12 +118,7 @@ function isAdminUser(userId) {
 async function registerGroup(chatId, title, options = {}) {
   if (!chatId || (typeof chatId === 'string' && chatId.startsWith('-100') === false && chatId.startsWith('-') === false)) return false;
   try {
-    await connectDB();
-    await Group.findOneAndUpdate(
-      { chat_id: chatId.toString() },
-      { title: title || 'Group', last_message_at: Date.now(), active: true, fail_count: 0 },
-      { upsert: true }
-    );
+    await db.registerGroup(chatId, title);
     return true;
   } catch (error) {
     console.error('❌ Error registering group:', error.message);
@@ -143,50 +133,24 @@ async function getAllGroups() {
 }
 
 async function getGroupSources() {
-  const envGroupIds = parseGroupChatIds(GROUP_CHAT_ID, GROUP_CHAT_IDS);
-  const dbGroups = [];
-  let dbError = null;
-
   try {
-    await connectDB();
-    dbGroups.push(...await Group.find({}));
+    return await db.getGroupSources();
   } catch (error) {
-    console.error('❌ Error fetching groups:', error.message);
-    dbError = error;
+    console.error('❌ Error fetching group sources:', error.message);
+    return {
+      chatIds: parseGroupChatIds(GROUP_CHAT_ID, GROUP_CHAT_IDS),
+      envGroupIds: parseGroupChatIds(GROUP_CHAT_ID, GROUP_CHAT_IDS),
+      dbGroups: [],
+      activeDbGroups: [],
+      dbError: error
+    };
   }
-
-  const activeDbGroups = dbGroups.filter(group => group.active !== false);
-  const chatIds = new Set(activeDbGroups.map(group => group.chat_id));
-  envGroupIds.forEach(id => chatIds.add(id));
-
-  return {
-    chatIds: Array.from(chatIds),
-    envGroupIds,
-    dbGroups,
-    activeDbGroups,
-    dbError
-  };
 }
 
 // تسجيل فشل الإرسال - بعد 5 فشل متتالي يتم تعطيل المجموعة
 async function markGroupFailed(chatId) {
   try {
-    await connectDB();
-    const group = await Group.findOne({ chat_id: chatId.toString() });
-    if (!group) return;
-    const newFailCount = (group.fail_count || 0) + 1;
-    const shouldDeactivate = newFailCount >= 5;
-    await Group.updateOne(
-      { chat_id: chatId.toString() },
-      {
-        fail_count: newFailCount,
-        last_failed_at: new Date(),
-        ...(shouldDeactivate ? { active: false } : {})
-      }
-    );
-    if (shouldDeactivate) {
-      console.log(`⚠️ Group ${chatId} deactivated after ${newFailCount} consecutive failures.`);
-    }
+    await db.markGroupFailed(chatId);
   } catch (e) {
     console.error('❌ Error marking group failed:', e.message);
   }
@@ -195,11 +159,7 @@ async function markGroupFailed(chatId) {
 // إعادة تعيين عداد الفشل عند نجاح الإرسال
 async function markGroupSuccess(chatId) {
   try {
-    await connectDB();
-    await Group.updateOne(
-      { chat_id: chatId.toString(), fail_count: { $gt: 0 } },
-      { fail_count: 0, active: true, last_message_at: new Date() }
-    );
+    await db.markGroupSuccess(chatId);
   } catch (e) {
     // silent, not critical
   }
@@ -576,22 +536,9 @@ bot.onText(/\/stats/, async (msg) => {
   }
 
   try {
-    await connectDB();
-
-    // تشغيل الاستعلامات بالتوازي لتسريع الاستجابة
     const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-    const [totalGroups, totalVideos, totalCommands, newGroups24h, topCommands] = await Promise.all([
-      Group.countDocuments(),
-      Video.countDocuments(),
-      CommandLog.countDocuments(),
-      Group.countDocuments({ added_at: { $gte: last24h } }),
-      CommandLog.aggregate([
-        { $group: { _id: "$command", count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $limit: 3 }
-      ])
-    ]);
+    const stats = await db.getStats(last24h);
+    const { totalGroups, totalVideos, totalCommands, newGroups24h, topCommands } = stats;
 
     let statsMsg = `📊 *إحصائيات البوت المتقدمة*\n`;
     statsMsg += `━━━━━━━━━━━━━━━━\n`;
@@ -602,7 +549,7 @@ bot.onText(/\/stats/, async (msg) => {
 
     statsMsg += `🔝 *الأوامر الأكثر استخداماً:*\n`;
     topCommands.forEach((cmd, i) => {
-      statsMsg += `${i + 1}. /${cmd._id} (${cmd.count} مرة)\n`;
+      statsMsg += `${i + 1}. /${cmd._id || cmd.command} (${cmd.count} مرة)\n`;
     });
 
     statsMsg += `━━━━━━━━━━━━━━━━\n`;
@@ -678,8 +625,7 @@ bot.onText(/\/activategroups/, async (msg) => {
   }
 
   try {
-    await connectDB();
-    const result = await Group.updateMany({}, { active: true, fail_count: 0 });
+    const result = await db.activateAllGroups();
     await sendReply(msg, `✅ تم تفعيل ${result.modifiedCount || 0} قروب.`);
   } catch (e) {
     await sendReply(msg, `❌ لم يتم تفعيل القروبات: ${e.message}`);
@@ -742,7 +688,8 @@ bot.onText(/\/status/, (msg) => {
   let status = `🤖 حالة البوت\n━━━━━━━━━━━━━━━━\n`;
   status += `✅ البوت يعمل (${isLocal ? 'Local' : 'Serverless'})\n`;
   status += `⏰ الوقت: ${now.toLocaleTimeString('ar-EG', { timeZone: TIMEZONE })}\n`;
-  status += `🗄️ التخزين: MongoDB\n`;
+  const isGitHub = !!(process.env.GITHUB_TOKEN && process.env.GITHUB_REPO);
+  status += `🗄️ التخزين: ${isGitHub ? 'GitHub DB' : 'Local JSON'}\n`;
   bot.sendMessage(msg.chat.id, status);
 });
 
@@ -757,7 +704,6 @@ bot.on('message', async (msg) => {
     // Track this async operation as well
     const op = (async () => {
       try {
-        await connectDB();
         let entry;
         if (msg.forward_from_chat && msg.forward_from_message_id) {
           entry = { chat_id: msg.forward_from_chat.id, message_id: msg.forward_from_message_id };
@@ -765,13 +711,10 @@ bot.on('message', async (msg) => {
           entry = { chat_id: msg.chat.id, message_id: msg.message_id };
         }
 
-        const exists = await Video.findOne({ chat_id: entry.chat_id.toString(), message_id: entry.message_id.toString() });
+        const exists = await db.isVideoExists(entry.chat_id, entry.message_id);
 
         if (!exists) {
-          await Video.create({
-            chat_id: entry.chat_id.toString(),
-            message_id: entry.message_id.toString()
-          });
+          await db.saveVideo(entry.chat_id, entry.message_id);
           await bot.sendMessage(msg.chat.id, '✅ تم حفظ الفيديو في قاعدة البيانات.');
         } else {
           await bot.sendMessage(msg.chat.id, '⚠️ هذا الفيديو محفوظ مسبقاً.');
@@ -797,6 +740,5 @@ module.exports = {
   sendEveningMessage,
   sendMidnightReminder,
   getAllGroups,
-  Video,
   pendingPromises
 };
