@@ -169,7 +169,7 @@ async function markGroupSuccess(chatId) {
 function formatMorningAthkar() {
   const selectedAthkar = [];
   const shuffled = [...morningAthkar].sort(() => 0.5 - Math.random());
-  for (let i = 0; i < Math.min(2, shuffled.length); i++) {
+  for (let i = 0; i < Math.min(1, shuffled.length); i++) {
     selectedAthkar.push(shuffled[i]);
   }
 
@@ -189,7 +189,7 @@ function formatMorningAthkar() {
 function formatEveningAthkar() {
   const selectedAthkar = [];
   const shuffled = [...eveningAthkar].sort(() => 0.5 - Math.random());
-  for (let i = 0; i < Math.min(2, shuffled.length); i++) {
+  for (let i = 0; i < Math.min(1, shuffled.length); i++) {
     selectedAthkar.push(shuffled[i]);
   }
 
