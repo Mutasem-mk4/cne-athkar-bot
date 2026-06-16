@@ -79,7 +79,7 @@ function background(promise) {
 
 const logCommand = (chatId, command) => {
   if (!chatId || !command) return;
-  background((async () => {
+  track((async () => {
     try {
       await db.logCommand(chatId, command);
     } catch (e) {
@@ -697,7 +697,7 @@ bot.onText(/\/status/, (msg) => {
 bot.on('message', async (msg) => {
   // تسجيل الجروب تلقائياً
   if (msg.chat.type === 'group' || msg.chat.type === 'supergroup') {
-    background(registerGroup(msg.chat.id, msg.chat.title));
+    track(registerGroup(msg.chat.id, msg.chat.title));
   }
 
   if (msg.chat.type === 'private' && msg.video) {
