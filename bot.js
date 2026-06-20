@@ -246,10 +246,6 @@ const sendFajrReminder = async (targetChatId) => {
 const sendMorningMessage = async (targetChatId) => {
   
   let morningContent = formatMorningAthkar();
-  
-  // Merge Fajr Reminder blessing at the top
-  const fajrBlessing = getRandomItem(fajrReminders);
-  morningContent = `💠 *طاب صباحكم بذكر الله*\n_${fajrBlessing}_\n\n${morningContent}`;
 
   const chatIds = targetChatId ? [targetChatId] : await getAllGroups();
   console.log('🌅 Sending MorningMessage to:', chatIds.length, 'groups');
