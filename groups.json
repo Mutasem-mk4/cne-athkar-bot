@@ -5,6 +5,24 @@
     "added_at": "2026-06-15T18:25:33.430Z",
     "last_message_at": "2026-06-15T18:25:33.430Z",
     "active": true,
+    "fail_count": 1,
+    "last_failed_at": "2026-06-20T05:05:50.906Z"
+  },
+  "-5228565333": {
+    "chat_id": "-5228565333",
+    "title": "تجريب",
+    "added_at": "2026-06-19T18:43:34.579Z",
+    "last_message_at": "2026-06-19T18:43:38.669Z",
+    "active": true,
+    "fail_count": 0,
+    "last_failed_at": null
+  },
+  "-1001704810004": {
+    "chat_id": "-1001704810004",
+    "title": "CNE MEMBERS",
+    "added_at": "2026-06-19T18:43:54.964Z",
+    "last_message_at": "2026-06-20T11:18:13.070Z",
+    "active": true,
     "fail_count": 0,
     "last_failed_at": null
   }
