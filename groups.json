@@ -5,8 +5,8 @@
     "added_at": "2026-06-15T18:25:33.430Z",
     "last_message_at": "2026-06-15T18:25:33.430Z",
     "active": true,
-    "fail_count": 2,
-    "last_failed_at": "2026-06-20T14:52:50.689Z"
+    "fail_count": 3,
+    "last_failed_at": "2026-06-21T05:50:24.729Z"
   },
   "-5228565333": {
     "chat_id": "-5228565333",
