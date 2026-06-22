@@ -4,9 +4,9 @@
     "title": "Test Group from Antigravity",
     "added_at": "2026-06-15T18:25:33.430Z",
     "last_message_at": "2026-06-15T18:25:33.430Z",
-    "active": true,
-    "fail_count": 4,
-    "last_failed_at": "2026-06-22T05:17:13.098Z"
+    "active": false,
+    "fail_count": 5,
+    "last_failed_at": "2026-06-22T14:02:40.038Z"
   },
   "-5228565333": {
     "chat_id": "-5228565333",
