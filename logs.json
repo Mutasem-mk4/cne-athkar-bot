@@ -3,5 +3,10 @@
     "chat_id": "-1000000000000",
     "command": "test_cmd",
     "timestamp": "2026-06-15T18:25:36.250Z"
+  },
+  {
+    "chat_id": "-1001704810004",
+    "command": "help",
+    "timestamp": "2026-07-24T14:29:00.465Z"
   }
 ]
