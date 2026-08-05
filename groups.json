@@ -7,5 +7,14 @@
     "active": true,
     "fail_count": 0,
     "last_failed_at": null
+  },
+  "-5228565333": {
+    "chat_id": "-5228565333",
+    "title": "تجريب",
+    "added_at": "2026-08-05T19:16:57.028Z",
+    "last_message_at": "2026-08-05T19:16:57.028Z",
+    "active": true,
+    "fail_count": 0,
+    "last_failed_at": null
   }
 }
