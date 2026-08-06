@@ -8,5 +8,10 @@
     "chat_id": "-1001704810004",
     "command": "help",
     "timestamp": "2026-07-24T14:29:00.465Z"
+  },
+  {
+    "chat_id": "5125017835",
+    "command": "btn_prayers",
+    "timestamp": "2026-08-06T11:03:11.793Z"
   }
 ]
